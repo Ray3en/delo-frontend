@@ -542,6 +542,7 @@
 }
 :is(.slide--dark, .slide--ink, .slide--teal) .fact a:hover { color: #ffffff; }
 /* dark-callouts:end */
+
 </style>
 </head>
 <body>
@@ -551,7 +552,7 @@
   </div>
   <div class="chrome chrome--bottom">
     <div class="hint">← → или пробел</div>
-    <div class="counter" id="counter">01 / 22</div>
+    <div class="counter" id="counter">01 / 24</div>
   </div>
   <div class="progress" aria-hidden="true"><i id="bar"></i></div>
 
@@ -595,16 +596,50 @@
 <span class="line"><span style="color:#D4D4D4">}</span></span>
 <span class="line"><span style="color:#D4D4D4"></span></span>
 <span class="line"><span style="color:#D4D4D4">&lt;input ref={inputRef} /&gt;</span></span></code></pre></div><div class="grid-2"><article class="card"><h3>Подходит</h3><p>DOM-элемент, id таймера, предыдущее значение, объект внешней библиотеки.</p></article><article class="card"><h3>Не подходит</h3><p>Данные, изменение которых должно сразу обновить интерфейс. Для них нужен state.</p></article></div></div></section>
-<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">useContext · пример</span> Занятие 02</div><h2>Общие данные без цепочки props</h2><div class="code-frame"><pre class="code code--sm" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">const</span><span style="color:#D4D4D4"> ThemeContext = createContext(</span><span style="color:#CE9178">'light'</span><span style="color:#D4D4D4">);</span></span>
+<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">useContext · пример</span> Занятие 02</div><h2>Тема доступна всем компонентам</h2><div class="code-frame"><pre class="code code--sm" data-language="tsx"><code><span class="line"><span style="color:#C586C0">type</span><span style="color:#4EC9B0"> Theme</span><span style="color:#D4D4D4"> = </span><span style="color:#CE9178">'light'</span><span style="color:#D4D4D4"> | </span><span style="color:#CE9178">'dark'</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#C586C0">const</span><span style="color:#D4D4D4"> ThemeContext = </span><span style="color:#DCDCAA">createContext</span><span style="color:#D4D4D4">(</span><span style="color:#C586C0">null</span><span style="color:#D4D4D4">);</span></span>
 <span class="line"><span style="color:#D4D4D4"></span></span>
-<span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">function</span><span style="color:#D4D4D4"> Toolbar() {</span></span>
-<span class="line"><span style="color:#D4D4D4">  </span><span style="color:#C586C0">const</span><span style="color:#D4D4D4"> theme = </span><span style="color:#DCDCAA">useContext</span><span style="color:#D4D4D4">(ThemeContext);</span></span>
-<span class="line"><span style="color:#D4D4D4">  </span><span style="color:#C586C0">return</span><span style="color:#D4D4D4"> &lt;button className={theme}&gt;Сохранить&lt;/button&gt;;</span></span>
+<span class="line"><span style="color:#C586C0">function</span><span style="color:#DCDCAA"> App</span><span style="color:#D4D4D4">() {</span></span>
+<span class="line"><span style="color:#C586C0">  const</span><span style="color:#D4D4D4"> [theme, setTheme] = </span><span style="color:#DCDCAA">useState</span><span style="color:#D4D4D4">&lt;</span><span style="color:#4EC9B0">Theme</span><span style="color:#D4D4D4">&gt;(</span><span style="color:#CE9178">'light'</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#C586C0">  const</span><span style="color:#D4D4D4"> toggleTheme = () =&gt;</span></span>
+<span class="line"><span style="color:#D4D4D4">    setTheme(value =&gt; value === </span><span style="color:#CE9178">'light'</span><span style="color:#D4D4D4"> ? </span><span style="color:#CE9178">'dark'</span><span style="color:#D4D4D4"> : </span><span style="color:#CE9178">'light'</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#C586C0">  return</span><span style="color:#D4D4D4"> (</span></span>
+<span class="line"><span style="color:#D4D4D4">    &lt;ThemeContext.Provider value={{ theme, toggleTheme }}&gt;</span></span>
+<span class="line"><span style="color:#D4D4D4">      &lt;Page /&gt;</span></span>
+<span class="line"><span style="color:#D4D4D4">    &lt;/ThemeContext.Provider&gt;</span></span>
+<span class="line"><span style="color:#D4D4D4">  );</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span></code></pre></div><div class="fact"><div class="label">Что передаёт Context</div><p>Provider хранит текущую тему и функцию переключения. Любой вложенный компонент получает их через useContext без цепочки props.</p></div></div></section>
+<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">Тема интерфейса</span> Занятие 02</div><h2>Стили светлой и тёмной темы</h2><div class="code-frame"><pre class="code" data-language="css"><code><span class="line"><span style="color:#DCDCAA">.theme-light</span><span style="color:#D4D4D4"> {</span></span>
+<span class="line"><span style="color:#9CDCFE">  color</span><span style="color:#D4D4D4">: </span><span style="color:#CE9178">#111820</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#9CDCFE">  background-color</span><span style="color:#D4D4D4">: </span><span style="color:#CE9178">#f7f3eb</span><span style="color:#D4D4D4">;</span></span>
 <span class="line"><span style="color:#D4D4D4">}</span></span>
 <span class="line"><span style="color:#D4D4D4"></span></span>
-<span class="line"><span style="color:#D4D4D4">&lt;ThemeContext.Provider value=</span><span style="color:#CE9178">"dark"</span><span style="color:#D4D4D4">&gt;</span></span>
-<span class="line"><span style="color:#D4D4D4">  &lt;Toolbar /&gt;</span></span>
-<span class="line"><span style="color:#D4D4D4">&lt;/ThemeContext.Provider&gt;</span></span></code></pre></div><div class="fact"><div class="label">Когда полезен</div><p>Context передаёт тему, язык или данные пользователя сразу вложенным компонентам. Промежуточным компонентам не нужно пересылать эти props вручную.</p></div></div></section>
+<span class="line"><span style="color:#DCDCAA">.theme-dark</span><span style="color:#D4D4D4"> {</span></span>
+<span class="line"><span style="color:#9CDCFE">  color</span><span style="color:#D4D4D4">: </span><span style="color:#CE9178">#f7f3eb</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#9CDCFE">  background-color</span><span style="color:#D4D4D4">: </span><span style="color:#CE9178">#111820</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span></code></pre></div><div class="fact"><div class="label">Как применить</div><p>Добавляем к корневому блоку класс theme-light или theme-dark. Цвет текста и фон меняются вместе.</p></div></div></section>
+
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">useContext · Header</span> Занятие 02</div><h2>Header переключает общую тему</h2><div class="code-frame"><pre class="code code--sm" data-language="tsx"><code><span class="line"><span style="color:#C586C0">function</span><span style="color:#DCDCAA"> Header</span><span style="color:#D4D4D4">() {</span></span>
+<span class="line"><span style="color:#C586C0">  const</span><span style="color:#D4D4D4"> context = </span><span style="color:#DCDCAA">useContext</span><span style="color:#D4D4D4">(ThemeContext);</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#C586C0">  if</span><span style="color:#D4D4D4"> (!context) </span><span style="color:#C586C0">return null</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#C586C0">  const</span><span style="color:#D4D4D4"> { theme, toggleTheme } = context;</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#C586C0">  return</span><span style="color:#D4D4D4"> (</span></span>
+<span class="line"><span style="color:#D4D4D4">    &lt;header className={`theme-${theme}`}&gt;</span></span>
+<span class="line"><span style="color:#D4D4D4">      &lt;h1&gt;Task Tracker&lt;/h1&gt;</span></span>
+<span class="line"><span style="color:#D4D4D4">      &lt;label&gt;</span></span>
+<span class="line"><span style="color:#D4D4D4">        &lt;input</span></span>
+<span class="line"><span style="color:#9CDCFE">          type</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">"checkbox"</span><span style="color:#9CDCFE"> role</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">"switch"</span></span>
+<span class="line"><span style="color:#9CDCFE">          checked</span><span style="color:#D4D4D4">={theme === </span><span style="color:#CE9178">'dark'</span><span style="color:#D4D4D4">}</span></span>
+<span class="line"><span style="color:#9CDCFE">          onChange</span><span style="color:#D4D4D4">={toggleTheme}</span></span>
+<span class="line"><span style="color:#D4D4D4">        /&gt;</span></span>
+<span class="line"><span style="color:#D4D4D4">        Тёмная тема</span></span>
+<span class="line"><span style="color:#D4D4D4">      &lt;/label&gt;</span></span>
+<span class="line"><span style="color:#D4D4D4">    &lt;/header&gt;</span></span>
+<span class="line"><span style="color:#D4D4D4">  );</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span></code></pre></div><div class="fact"><div class="label">Связь примеров</div><p>Header читает theme и toggleTheme из ThemeContext. После переключения React меняет класс theme-light на theme-dark или обратно.</p></div></div></section>
 <section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Оптимизация · пример</span> Занятие 02</div><h2>useMemo и useCallback после измерения</h2><div class="grid-2"><article class="card"><h3>useMemo</h3><p>Кеширует результат вычисления между рендерами.</p><div class="code-frame"><pre class="code code--sm" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">const</span><span style="color:#D4D4D4"> visible = </span><span style="color:#DCDCAA">useMemo</span><span style="color:#D4D4D4">(</span></span>
 <span class="line"><span style="color:#D4D4D4">  () =&gt; filterTasks(tasks, query),</span></span>
 <span class="line"><span style="color:#D4D4D4">  [tasks, query]</span></span>
