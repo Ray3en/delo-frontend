@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Занятие 02. Хуки, эффекты и сетевые запросы — ДЕЛО</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0c1624;
+      --ink-soft: #1a2a3a;
+      --paper: #f3f0e8;
+      --paper-warm: #ebe6da;
+      --accent: #e85d04;
+      --accent-deep: #c44902;
+      --accent-glow: #ffb068;
+      --teal: #0d6e6e;
+      --muted: #5c6b7a;
+      --line: rgba(12, 22, 36, 0.12);
+      --font-display: "Unbounded", sans-serif;
+      --font-body: "Onest", sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: var(--font-body);
+      color: var(--ink);
+      background: #0b1016;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .deck {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(4.25rem, 9vh, 5.5rem) clamp(1.5rem, 5vw, 4.5rem) clamp(3.5rem, 8vh, 4.75rem);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(10px);
+      transition: opacity 0.35s ease, transform 0.35s ease, visibility 0.35s;
+      overflow: hidden;
+    }
+    .slide.is-on {
+      opacity: 1;
+      visibility: visible;
+      transform: none;
+      z-index: 1;
+    }
+
+    .slide--dark { background: #111820; color: var(--paper); }
+    .slide--ink { background: var(--ink); color: var(--paper); }
+    .slide--paper { background: var(--paper); color: var(--ink); }
+    .slide--warm { background: linear-gradient(180deg, var(--paper-warm), var(--paper)); color: var(--ink); }
+    .slide--teal { background: linear-gradient(135deg, #0d3d3d 0%, #0c1624 55%, #1a2433 100%); color: var(--paper); }
+
+    .inner {
+      width: min(1120px, 100%);
+      margin-inline: auto;
+    }
+    .inner--wide { width: min(1240px, 100%); }
+
+    .chrome {
+      position: fixed;
+      z-index: 10;
+      left: 0; right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.05rem clamp(1.5rem, 5vw, 4.5rem);
+      pointer-events: none;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .chrome--top { top: 0; color: var(--ink); }
+    .chrome--bottom { bottom: 0; padding-bottom: 1.15rem; color: var(--muted); }
+    .brand { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.06em; }
+    .brand .x { color: var(--accent); }
+    .hint { font-weight: 500; letter-spacing: 0.04em; text-transform: none; }
+    body:has(.slide--dark.is-on) .chrome--top,
+    body:has(.slide--ink.is-on) .chrome--top,
+    body:has(.slide--teal.is-on) .chrome--top { color: var(--paper); }
+    body:has(.slide--dark.is-on) .chrome--bottom,
+    body:has(.slide--ink.is-on) .chrome--bottom,
+    body:has(.slide--teal.is-on) .chrome--bottom { color: rgba(243, 240, 232, 0.5); }
+
+    .progress {
+      position: fixed;
+      z-index: 11;
+      left: 0; right: 0; bottom: 0;
+      height: 3px;
+      background: rgba(12, 22, 36, 0.18);
+    }
+    .progress > i {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      margin-bottom: 1rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .pill {
+      color: var(--accent-deep);
+      background: rgba(232, 93, 4, 0.12);
+      padding: 0.28rem 0.6rem;
+      border-radius: 999px;
+    }
+    .slide--dark .kicker,
+    .slide--ink .kicker,
+    .slide--teal .kicker { color: rgba(243, 240, 232, 0.5); }
+    .slide--dark .pill,
+    .slide--ink .pill,
+    .slide--teal .pill {
+      color: var(--accent-glow);
+      background: rgba(232, 93, 4, 0.18);
+    }
+
+    .eyebrow {
+      font-family: var(--font-display);
+      font-size: clamp(1.15rem, 2.6vw, 1.7rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.65rem;
+    }
+    h1, h2 {
+      font-family: var(--font-display);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.08;
+    }
+    h1 {
+      font-size: clamp(2.4rem, 7vw, 4.8rem);
+      text-transform: uppercase;
+      max-width: 14ch;
+      margin-bottom: 1.1rem;
+    }
+    h2 {
+      font-size: clamp(1.7rem, 4.2vw, 2.85rem);
+      max-width: 22ch;
+      margin-bottom: 0.85rem;
+    }
+    .lead {
+      font-size: clamp(1.05rem, 2vw, 1.28rem);
+      line-height: 1.45;
+      max-width: 38ch;
+      color: var(--muted);
+    }
+    .slide--dark .lead,
+    .slide--ink .lead,
+    .slide--teal .lead { color: rgba(243, 240, 232, 0.68); }
+
+    .agenda {
+      list-style: none;
+      display: grid;
+      gap: 0;
+    }
+    .agenda li {
+      display: grid;
+      grid-template-columns: 3.4rem 1fr;
+      gap: 1.15rem;
+      padding: 0.72rem 0;
+      border-bottom: 1px solid var(--line);
+      align-items: baseline;
+    }
+    .agenda .n {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 1.05rem;
+    }
+    .agenda .t {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(1.05rem, 2vw, 1.35rem);
+      letter-spacing: -0.02em;
+    }
+    .agenda .d {
+      display: block;
+      margin-top: 0.25rem;
+      color: var(--muted);
+      font-size: 0.98rem;
+      font-weight: 400;
+    }
+
+    .grid-2, .grid-3, .grid-4 {
+      display: grid;
+      gap: clamp(1rem, 2.5vw, 1.6rem);
+      margin-top: 1.75rem;
+    }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .card {
+      padding: clamp(1.15rem, 2.2vw, 1.6rem);
+      border: 1px solid rgba(12, 22, 36, 0.08);
+      background: rgba(255, 255, 255, 0.55);
+      border-radius: 1.35rem;
+      box-shadow: 0 12px 32px rgba(12, 22, 36, 0.06);
+    }
+    .slide--dark .card,
+    .slide--ink .card,
+    .slide--teal .card {
+      background: rgba(243, 240, 232, 0.06);
+      border-color: rgba(243, 240, 232, 0.12);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+    }
+    .card h3 {
+      font-family: var(--font-display);
+      font-size: clamp(1rem, 1.6vw, 1.18rem);
+      font-weight: 700;
+      margin-bottom: 0.45rem;
+      letter-spacing: -0.02em;
+    }
+    .slide--dark .card h3 { color: var(--accent-glow); }
+    .card p { color: var(--muted); font-size: 0.98rem; line-height: 1.45; }
+    .slide--dark .card p,
+    .slide--ink .card p,
+    .slide--teal .card p { color: rgba(243, 240, 232, 0.68); }
+
+    .path {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem 0.35rem;
+      margin-top: 1.75rem;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+    }
+    .path span {
+      padding: 0.45rem 0.7rem;
+      border: 1px solid rgba(243, 240, 232, 0.16);
+      color: rgba(243, 240, 232, 0.55);
+    }
+    .path .now {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .path .sep { border: 0; padding: 0 0.15rem; color: var(--accent); }
+
+    .code {
+      --win-bar: 1.85rem;
+      position: relative;
+      margin-top: 1.5rem;
+      padding: calc(var(--win-bar) + 0.95rem) 1.35rem 1.1rem;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: clamp(0.92rem, 1.4vw, 1.08rem);
+      line-height: 1.55;
+      color: #e8e4da;
+      overflow: auto;
+      border-radius: 14px;
+      background: #1c1c1e;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.08) inset,
+        0 18px 44px rgba(12, 22, 36, 0.28);
+    }
+    .code::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--win-bar);
+      border-radius: 14px 14px 0 0;
+      background: linear-gradient(180deg, #3a3a3c, #2c2c2e);
+      box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+    }
+    .code::after {
+      content: "";
+      position: absolute;
+      top: calc((var(--win-bar) - 10px) / 2);
+      left: 0.85rem;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ff5f57;
+      box-shadow:
+        16px 0 0 #febc2e,
+        32px 0 0 #28c840;
+    }
+    .code--sm {
+      --win-bar: 1.55rem;
+      margin-top: 0.85rem;
+      padding: calc(var(--win-bar) + 0.7rem) 0.95rem 0.8rem;
+      font-size: clamp(0.78rem, 1.15vw, 0.9rem);
+      line-height: 1.45;
+      border-radius: 12px;
+    }
+    .code--sm::before { border-radius: 12px 12px 0 0; }
+    .code--sm::after {
+      width: 8px;
+      height: 8px;
+      top: calc((var(--win-bar) - 8px) / 2);
+      left: 0.75rem;
+      box-shadow:
+        13px 0 0 #febc2e,
+        26px 0 0 #28c840;
+    }
+    .card .code { margin-bottom: 0; }
+    .fact {
+      margin-top: 1.15rem;
+      padding: 0.95rem 1.15rem;
+      border-left: 3px solid var(--accent);
+      background: rgba(232, 93, 4, 0.08);
+      border-radius: 0 1rem 1rem 0;
+    }
+    .fact .label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-deep);
+      margin-bottom: 0.35rem;
+    }
+    .fact p {
+      font-size: 1.02rem;
+      line-height: 1.4;
+      color: var(--ink-soft);
+      max-width: 54ch;
+    }
+    .grid-2--tight {
+      margin-top: 1.15rem;
+      gap: 0.9rem;
+    }
+    .sig {
+      display: grid;
+      grid-template-columns: auto 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+    .sig-part {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      padding: 0.75rem 0.9rem 0.85rem;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.28);
+      min-width: 0;
+      border-radius: 1rem;
+    }
+    .sig-part--in { border-color: rgba(13, 110, 110, 0.35); }
+    .sig-part--out { border-color: rgba(232, 93, 4, 0.35); }
+    .sig-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .sig-part--in .sig-label { color: var(--teal); }
+    .sig-part--out .sig-label { color: var(--accent-deep); }
+    .sig-code {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.3;
+    }
+    .kw { color: #ff9f5a; }
+    .fn { color: #7ecfcf; }
+    .st { color: #c9e39b; }
+    .cm { color: rgba(243, 240, 232, 0.38); }
+    .tp { color: #9ec5ff; }
+    .num { color: #e8c27a; }
+    .card code, .lead code, p code, h3 code {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.92em;
+      color: var(--accent-deep);
+    }
+    .slide--dark .card code,
+    .slide--ink .card code,
+    .slide--teal .card code,
+    .slide--dark .lead code,
+    .slide--ink .lead code,
+    .slide--teal .lead code { color: var(--accent-glow); }
+
+    .dots {
+      list-style: none;
+      display: grid;
+      gap: 0.85rem;
+      margin-top: 1.25rem;
+      max-width: 46rem;
+    }
+    .dots li {
+      position: relative;
+      padding-left: 1.2rem;
+      font-size: 1.12rem;
+      line-height: 1.45;
+      color: var(--ink-soft);
+    }
+    .dots li::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 0.58em;
+      width: 0.45rem; height: 0.45rem;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .slide--dark .dots li,
+    .slide--ink .dots li,
+    .slide--teal .dots li { color: rgba(243, 240, 232, 0.78); }
+
+    .practice {
+      margin-top: 1.75rem;
+      padding: 1.35rem 1.5rem;
+      border: 1px solid rgba(243, 240, 232, 0.16);
+      background: rgba(232, 93, 4, 0.12);
+      border-radius: 1.15rem;
+    }
+    .practice .label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-glow);
+      margin-bottom: 0.45rem;
+    }
+    .practice p { font-size: 1.12rem; line-height: 1.4; max-width: 42ch; }
+
+    .nav-hit {
+      position: fixed;
+      top: 0; bottom: 3px;
+      width: 18%;
+      z-index: 8;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+    }
+    .nav-hit--prev { left: 0; }
+    .nav-hit--next { right: 0; }
+
+    @media (max-width: 860px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .agenda li { grid-template-columns: 2.4rem 1fr; }
+      .chrome .hint { display: none; }
+      h1 { max-width: none; }
+    }
+
+    .slide { overflow-y: auto; }
+    .inner { flex-shrink: 0; }
+    .code { white-space: pre; tab-size: 2; }
+    .grid-2 > *, .grid-3 > * { min-width: 0; }
+    a { color: var(--accent-deep); text-underline-offset: 4px; }
+    .slide--ink a, .slide--dark a { color: var(--accent-glow); }
+    .nav-hit { top: auto; bottom: 0.55rem; width: 3rem; height: 2.6rem; z-index: 12; color: var(--accent); font-size: 1.5rem; border-radius: 0.5rem; }
+    .nav-hit--prev { left: calc(50% - 3.5rem); }
+    .nav-hit--next { right: calc(50% - 3.5rem); }
+    .nav-hit:focus-visible { outline: 2px solid var(--accent); }
+    @media (max-width: 860px), (max-height: 650px) {
+      .slide { justify-content: flex-start; }
+      .grid-2, .grid-3, .grid-4 { gap: 0.8rem; margin-top: 1rem; }
+    }
+    @media (prefers-reduced-motion: reduce) { .slide, .progress > i { transition: none; } }
+    @media print {
+      html, body { height: auto; overflow: visible; background: white; }
+      .chrome, .progress, .nav-hit { display: none; }
+      .deck { height: auto; }
+      .slide { position: relative; opacity: 1; visibility: visible; transform: none; min-height: 100vh; break-after: page; overflow: visible; print-color-adjust: exact; }
+    }
+
+    .code { font-size: clamp(0.85rem, 1.25vw, 1rem); line-height: 1.45; }
+    .code--sm { font-size: clamp(0.78rem, 1.1vw, 0.9rem); }
+    .hook-table { width: 100%; border-collapse: collapse; margin-top: 1.4rem; font-size: 1.03rem; line-height: 1.4; }
+    .hook-table th, .hook-table td { text-align: left; padding: 0.75rem 0.9rem; border-bottom: 1px solid var(--line); }
+    .hook-table th { color: var(--accent-deep); }
+    .hook-table td:first-child { white-space: nowrap; font-weight: 600; }
+    .table-wrap { overflow-x: auto; }
+    .slide--ink .fact p, .slide--dark .fact p { color: var(--paper); }
+    .slide--ink .fact .label, .slide--dark .fact .label { color: var(--accent-glow); }
+  
+/* code-tools:start */
+.code-frame { position: relative; margin-top: 1.5rem; min-width: 0; }
+.code-frame .code { margin-top: 0; color: #d4d4d4; background: #1e1e1e; }
+.code-frame .code code { color: #d4d4d4; font: inherit; }
+.code-copy { position: absolute; z-index: 3; top: 2px; right: 8px; height: 26px; min-width: 30px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 2px 7px; border: 1px solid transparent; border-radius: 5px; background: #303033; color: #d4d4d4; cursor: pointer; font: 11px/1.2 var(--font-body); }
+.code-copy:hover { background: #454549; color: white; border-color: #707074; }
+.code-copy:focus-visible { outline: 2px solid #ffb068; outline-offset: 2px; }
+.code-copy svg { width: 15px; height: 15px; flex-shrink: 0; }
+.code-copy[data-state="success"] { color: #b5cea8; }
+.code-copy[data-state="error"] { color: #ffb068; }
+.code-copy-label:empty { display: none; }
+.copy-announcement { position: fixed; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (pointer: coarse) { .code-copy { min-width: 44px; } }
+@media print { .code-copy, .copy-announcement { display: none; } }
+/* code-tools:end */
+
+
+/* dark-callouts:start */
+:is(.slide--dark, .slide--ink, .slide--teal) .fact {
+  color: #f3f0e8;
+  background: #243044;
+  border: 1px solid #536079;
+  border-left: 4px solid #ffb068;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+:is(.slide--dark, .slide--ink, .slide--teal) .fact p,
+:is(.slide--dark, .slide--ink, .slide--teal) .fact li {
+  color: #f3f0e8;
+}
+:is(.slide--dark, .slide--ink, .slide--teal) .fact .label {
+  color: #ffb068;
+}
+:is(.slide--dark, .slide--ink, .slide--teal) .fact a {
+  color: #a8daff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+:is(.slide--dark, .slide--ink, .slide--teal) .fact code {
+  color: #ffe0ba;
+  background: #192231;
+  padding: 0.08em 0.28em;
+  border-radius: 0.25rem;
+}
+:is(.slide--dark, .slide--ink, .slide--teal) .fact a:hover { color: #ffffff; }
+/* dark-callouts:end */
+</style>
+</head>
+<body>
+  <div class="chrome chrome--top">
+    <div class="brand">Дело <span class="x">·</span> Frontend</div>
+    <div class="meta">Занятие 02</div>
+  </div>
+  <div class="chrome chrome--bottom">
+    <div class="hint">← → или пробел</div>
+    <div class="counter" id="counter">01 / 22</div>
+  </div>
+  <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+
+  <button class="nav-hit nav-hit--prev" type="button" aria-label="Предыдущий слайд">←</button>
+  <button class="nav-hit nav-hit--next" type="button" aria-label="Следующий слайд">→</button>
+
+  <main class="deck" id="deck">
+<section class="slide slide--dark is-on"><div class="inner"><div class="kicker"><span class="pill">Frontend · React</span> Занятие 02</div><p class="eyebrow">ДЕЛО</p><h1>Хуки и<br>асинхронность</h1><p class="lead">Управляем состоянием и эффектами, работаем с DOM и загружаем внешние данные в Task Tracker.</p><div class="path"><span class="now">Hooks</span><b class="sep">→</b><span>Lifecycle</span><b class="sep">→</b><span>Fetch API</span></div></div></section>
+<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">О занятии</span> Занятие 02</div><h2>Подключаем внешний мир</h2><div class="grid-2"><article class="card"><h3>Цель</h3><p>Научиться управлять состоянием, побочными эффектами, ссылками на DOM и базовыми сетевыми запросами.</p></article><article class="card"><h3>Результат</h3><p>Task Tracker загружает задачи из API, показывает загрузку и ошибку, поддерживает повторный запрос.</p></article></div></div></section>
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Маршрут</span> Занятие 02</div><h2>План занятия</h2><ol class="agenda"><li><span class="n">01</span><div class="t">useState<span class="d">Снимок рендера и обновления состояния</span></div></li><li><span class="n">02</span><div class="t">useEffect<span class="d">Синхронизация, зависимости и cleanup</span></div></li><li><span class="n">03</span><div class="t">useRef<span class="d">DOM-ссылки и значение между рендерами</span></div></li><li><span class="n">04</span><div class="t">Обзор хуков<span class="d">useContext, useMemo и useCallback на примерах</span></div></li><li><span class="n">05</span><div class="t">Fetch API<span class="d">GET-запрос, состояния интерфейса и практика</span></div></li></ol></div></section>
+<section class="slide slide--ink"><div class="inner"><div class="kicker"><span class="pill">useState</span> Занятие 02</div><h2>useState хранит данные компонента</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">const</span><span style="color:#D4D4D4"> [count, setCount] = </span><span style="color:#DCDCAA">useState</span><span style="color:#D4D4D4">(</span><span style="color:#B5CEA8">0</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">function</span><span style="color:#D4D4D4"> handleClick() {</span></span>
+<span class="line"><span style="color:#D4D4D4">  setCount(count + </span><span style="color:#B5CEA8">1</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span></code></pre></div><div class="fact"><div class="label">Как это работает</div><p>count содержит текущее число. setCount задаёт новое число, после чего React обновляет текст на экране.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Правила хуков</span> Занятие 02</div><h2>Порядок вызовов должен сохраняться</h2><ul class="dots"><li>Вызывайте хуки на верхнем уровне компонента или собственного хука.</li><li>Не помещайте вызов хука в условие, цикл или вложенную функцию.</li><li>React связывает состояние с позицией вызова в дереве компонентов.</li><li>Функции, начинающиеся с use, могут объединять другие хуки.</li></ul><div class="code-frame"><pre class="code code--sm" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#6A9955">// Плохо</span><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">if</span><span style="color:#D4D4D4"> (isOpen) </span><span style="color:#DCDCAA">useEffect</span><span style="color:#D4D4D4">(() =&gt; {}, []);</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4"></span><span style="color:#6A9955">// Хорошо</span><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4"></span><span style="color:#DCDCAA">useEffect</span><span style="color:#D4D4D4">(() =&gt; {</span></span>
+<span class="line"><span style="color:#D4D4D4">  </span><span style="color:#C586C0">if</span><span style="color:#D4D4D4"> (!isOpen) </span><span style="color:#C586C0">return</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#D4D4D4">}, [isOpen]);</span></span></code></pre></div></div></section>
+<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">Жизненный цикл</span> Занятие 02</div><h2>Компонент появляется, меняется и удаляется</h2><div class="grid-3"><article class="card"><h3>Появился</h3><p>React впервые показывает компонент на странице.</p></article><article class="card"><h3>Изменился</h3><p>Props или state изменились, поэтому React обновляет интерфейс.</p></article><article class="card"><h3>Удалился</h3><p>Компонент больше не нужен и исчезает со страницы.</p></article></div><div class="fact"><div class="label">Где нужен useEffect</div><p>useEffect запускает дополнительное действие после появления или изменения компонента.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">Жизненный цикл · схема</span> Занятие 02</div><h2>Четыре этапа работы компонента</h2><div class="grid-4"><article class="card"><h3>01 · Инициализация</h3><p>React получает props, создаёт начальное state и впервые вызывает функцию компонента.</p></article><article class="card"><h3>02 · Монтирование</h3><p>React добавляет элементы компонента на страницу. После показа запускается useEffect.</p></article><article class="card"><h3>03 · Обновление</h3><p>Props или state изменились. React снова вызывает компонент и обновляет нужные элементы.</p></article><article class="card"><h3>04 · Размонтирование</h3><p>Компонент удаляется со страницы. React запускает функции очистки эффектов.</p></article></div><div class="path"><span class="now" style="color:#fff">Инициализация</span><b class="sep">→</b><span style="color:var(--ink);border-color:var(--line)">Монтирование</span><b class="sep">→</b><span style="color:var(--ink);border-color:var(--line)">Обновление</span><b class="sep">→</b><span style="color:var(--ink);border-color:var(--line)">Размонтирование</span></div></div></section>
+<section class="slide slide--ink"><div class="inner"><div class="kicker"><span class="pill">useEffect</span> Занятие 02</div><h2>useEffect запускает код после обновления экрана</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#DCDCAA">useEffect</span><span style="color:#D4D4D4">(() =&gt; {</span></span>
+<span class="line"><span style="color:#D4D4D4">  </span><span style="color:#DCDCAA">console</span><span style="color:#D4D4D4">.log(</span><span style="color:#CE9178">'Компонент показан или обновлён'</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#D4D4D4">});</span></span></code></pre></div><ul class="dots"><li>Сначала React показывает интерфейс.</li><li>После этого выполняется код внутри useEffect.</li><li>Массив зависимостей определяет, когда повторять эффект.</li></ul></div></section>
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">useEffect · без массива</span> Занятие 02</div><h2>Запуск после каждого обновления</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#DCDCAA">useEffect</span><span style="color:#D4D4D4">(() =&gt; {</span></span>
+<span class="line"><span style="color:#D4D4D4">  </span><span style="color:#DCDCAA">console</span><span style="color:#D4D4D4">.log(</span><span style="color:#CE9178">'Интерфейс обновился'</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#D4D4D4">});</span></span></code></pre></div><div class="fact"><div class="label">Когда срабатывает</div><p>Сообщение появляется после первого показа компонента и после каждого следующего обновления.</p></div></div></section>
+<section class="slide slide--ink"><div class="inner"><div class="kicker"><span class="pill">useEffect · пустой массив</span> Занятие 02</div><h2>Запуск при появлении компонента</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#DCDCAA">useEffect</span><span style="color:#D4D4D4">(() =&gt; {</span></span>
+<span class="line"><span style="color:#D4D4D4">  </span><span style="color:#DCDCAA">console</span><span style="color:#D4D4D4">.log(</span><span style="color:#CE9178">'Страница задач открыта'</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#D4D4D4">}, []);</span></span></code></pre></div><div class="fact"><div class="label">Пример применения</div><p>Можно один раз загрузить начальные данные или подключить обработчик события. Пустой массив означает, что эффект не зависит от props и state.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">useEffect · зависимость</span> Занятие 02</div><h2>Запуск при изменении выбранного значения</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#DCDCAA">useEffect</span><span style="color:#D4D4D4">(() =&gt; {</span></span>
+<span class="line"><span style="color:#D4D4D4">  </span><span style="color:#DCDCAA">document</span><span style="color:#D4D4D4">.title = </span><span style="color:#CE9178">`Задач: ${tasks.length}`</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#D4D4D4">}, [tasks.length]);</span></span></code></pre></div><div class="fact"><div class="label">Пример применения</div><p>Эффект запускается при первом показе компонента и после изменения количества задач. Другие обновления его не запускают.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">useRef</span> Занятие 02</div><h2>Значение между рендерами без нового рендера</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">const</span><span style="color:#D4D4D4"> inputRef = </span><span style="color:#DCDCAA">useRef</span><span style="color:#D4D4D4">&lt;</span><span style="color:#4EC9B0">HTMLInputElement</span><span style="color:#D4D4D4">&gt;(</span><span style="color:#C586C0">null</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">function</span><span style="color:#D4D4D4"> focusInput() {</span></span>
+<span class="line"><span style="color:#D4D4D4">  inputRef.current?.focus();</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4">&lt;input ref={inputRef} /&gt;</span></span></code></pre></div><div class="grid-2"><article class="card"><h3>Подходит</h3><p>DOM-элемент, id таймера, предыдущее значение, объект внешней библиотеки.</p></article><article class="card"><h3>Не подходит</h3><p>Данные, изменение которых должно сразу обновить интерфейс. Для них нужен state.</p></article></div></div></section>
+<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">useContext · пример</span> Занятие 02</div><h2>Общие данные без цепочки props</h2><div class="code-frame"><pre class="code code--sm" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">const</span><span style="color:#D4D4D4"> ThemeContext = createContext(</span><span style="color:#CE9178">'light'</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">function</span><span style="color:#D4D4D4"> Toolbar() {</span></span>
+<span class="line"><span style="color:#D4D4D4">  </span><span style="color:#C586C0">const</span><span style="color:#D4D4D4"> theme = </span><span style="color:#DCDCAA">useContext</span><span style="color:#D4D4D4">(ThemeContext);</span></span>
+<span class="line"><span style="color:#D4D4D4">  </span><span style="color:#C586C0">return</span><span style="color:#D4D4D4"> &lt;button className={theme}&gt;Сохранить&lt;/button&gt;;</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4">&lt;ThemeContext.Provider value=</span><span style="color:#CE9178">"dark"</span><span style="color:#D4D4D4">&gt;</span></span>
+<span class="line"><span style="color:#D4D4D4">  &lt;Toolbar /&gt;</span></span>
+<span class="line"><span style="color:#D4D4D4">&lt;/ThemeContext.Provider&gt;</span></span></code></pre></div><div class="fact"><div class="label">Когда полезен</div><p>Context передаёт тему, язык или данные пользователя сразу вложенным компонентам. Промежуточным компонентам не нужно пересылать эти props вручную.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Оптимизация · пример</span> Занятие 02</div><h2>useMemo и useCallback после измерения</h2><div class="grid-2"><article class="card"><h3>useMemo</h3><p>Кеширует результат вычисления между рендерами.</p><div class="code-frame"><pre class="code code--sm" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">const</span><span style="color:#D4D4D4"> visible = </span><span style="color:#DCDCAA">useMemo</span><span style="color:#D4D4D4">(</span></span>
+<span class="line"><span style="color:#D4D4D4">  () =&gt; filterTasks(tasks, query),</span></span>
+<span class="line"><span style="color:#D4D4D4">  [tasks, query]</span></span>
+<span class="line"><span style="color:#D4D4D4">);</span></span></code></pre></div></article><article class="card"><h3>useCallback</h3><p>Сохраняет ссылку на функцию, когда это важно для оптимизированного потомка.</p><div class="code-frame"><pre class="code code--sm" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">const</span><span style="color:#D4D4D4"> remove = </span><span style="color:#DCDCAA">useCallback</span><span style="color:#D4D4D4">(</span></span>
+<span class="line"><span style="color:#D4D4D4">  id =&gt; </span><span style="color:#DCDCAA">setTasks</span><span style="color:#D4D4D4">(v =&gt; v.filter(x =&gt; x.id !== id)),</span></span>
+<span class="line"><span style="color:#D4D4D4">  []</span></span>
+<span class="line"><span style="color:#D4D4D4">);</span></span></code></pre></div></article></div></div></section>
+<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">Оптимизация</span> Занятие 02</div><h2>Сначала находим медленное место</h2><ul class="dots"><li>Откройте React DevTools Profiler и повторите медленное действие.</li><li>Проверьте, какие компоненты обновились и сколько времени занял рендер.</li><li>Уберите лишние эффекты и ненужные обновления состояния.</li><li>Используйте useMemo или useCallback только для найденной проблемы.</li></ul><div class="fact"><div class="label">Главное правило</div><p>Если интерфейс работает быстро, дополнительная мемоизация не нужна.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">HTTP и Fetch API</span> Занятие 02</div><h2>GET-запрос возвращает Response</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">const</span><span style="color:#D4D4D4"> </span><span style="color:#DCDCAA">response</span><span style="color:#D4D4D4"> = </span><span style="color:#C586C0">await</span><span style="color:#D4D4D4"> </span><span style="color:#DCDCAA">fetch</span><span style="color:#D4D4D4">(url);</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">if</span><span style="color:#D4D4D4"> (!</span><span style="color:#DCDCAA">response</span><span style="color:#D4D4D4">.ok) {</span></span>
+<span class="line"><span style="color:#D4D4D4">  </span><span style="color:#C586C0">throw</span><span style="color:#D4D4D4"> </span><span style="color:#C586C0">new</span><span style="color:#D4D4D4"> </span><span style="color:#DCDCAA">Error</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">`HTTP ${response.status}`</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">const</span><span style="color:#D4D4D4"> data = </span><span style="color:#C586C0">await</span><span style="color:#D4D4D4"> </span><span style="color:#DCDCAA">response</span><span style="color:#D4D4D4">.json();</span></span></code></pre></div><div class="fact"><div class="label">Важно</div><p>fetch не отклоняет Promise только из-за статуса 404 или 500. Успешность HTTP-ответа проверяем через response.ok.</p></div></div></section>
+<section class="slide slide--ink"><div class="inner"><div class="kicker"><span class="pill">Состояния запроса</span> Занятие 02</div><h2>Интерфейс показывает процесс</h2><div class="grid-3"><article class="card"><h3>Loading</h3><p>Запрос выполняется. Показываем индикатор и исключаем повторный запуск.</p></article><article class="card"><h3>Error</h3><p>Объясняем проблему и даём повторить запрос.</p></article><article class="card"><h3>Success</h3><p>Показываем данные или понятное пустое состояние.</p></article></div><div class="code-frame"><pre class="code code--sm" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">const</span><span style="color:#D4D4D4"> [status, </span><span style="color:#DCDCAA">setStatus</span><span style="color:#D4D4D4">] = </span><span style="color:#DCDCAA">useState</span><span style="color:#D4D4D4">&lt;</span><span style="color:#CE9178">'idle'</span><span style="color:#D4D4D4"> | </span><span style="color:#CE9178">'loading'</span><span style="color:#D4D4D4"> | </span><span style="color:#CE9178">'success'</span><span style="color:#D4D4D4"> | </span><span style="color:#CE9178">'error'</span><span style="color:#D4D4D4">&gt;(</span><span style="color:#CE9178">'idle'</span><span style="color:#D4D4D4">);</span></span></code></pre></div></div></section>
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Практика · данные</span> Занятие 02</div><h2>Запрос отдельно от компонента</h2><div class="code-frame"><pre class="code code--sm" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">type</span><span style="color:#D4D4D4"> </span><span style="color:#4EC9B0">ApiTodo</span><span style="color:#D4D4D4"> = {</span></span>
+<span class="line"><span style="color:#D4D4D4">  id: </span><span style="color:#4EC9B0">number</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#D4D4D4">  title: </span><span style="color:#4EC9B0">string</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#D4D4D4">  completed: </span><span style="color:#4EC9B0">boolean</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#D4D4D4">};</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4"></span><span style="color:#C586C0">async</span><span style="color:#D4D4D4"> </span><span style="color:#C586C0">function</span><span style="color:#D4D4D4"> fetchTodos() {</span></span>
+<span class="line"><span style="color:#D4D4D4">  </span><span style="color:#C586C0">const</span><span style="color:#D4D4D4"> </span><span style="color:#DCDCAA">response</span><span style="color:#D4D4D4"> = </span><span style="color:#C586C0">await</span><span style="color:#D4D4D4"> </span><span style="color:#DCDCAA">fetch</span><span style="color:#D4D4D4">(</span></span>
+<span class="line"><span style="color:#D4D4D4">    </span><span style="color:#CE9178">'https://jsonplaceholder.typicode.com/todos?userId=1'</span><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4">  );</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4">  </span><span style="color:#C586C0">if</span><span style="color:#D4D4D4"> (!</span><span style="color:#DCDCAA">response</span><span style="color:#D4D4D4">.ok) {</span></span>
+<span class="line"><span style="color:#D4D4D4">    </span><span style="color:#C586C0">throw</span><span style="color:#D4D4D4"> </span><span style="color:#C586C0">new</span><span style="color:#D4D4D4"> </span><span style="color:#DCDCAA">Error</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">`HTTP ${response.status}`</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#D4D4D4">  }</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4">  </span><span style="color:#C586C0">return</span><span style="color:#D4D4D4"> (</span><span style="color:#C586C0">await</span><span style="color:#D4D4D4"> </span><span style="color:#DCDCAA">response</span><span style="color:#D4D4D4">.json()) </span><span style="color:#C586C0">as</span><span style="color:#D4D4D4"> </span><span style="color:#4EC9B0">ApiTodo</span><span style="color:#D4D4D4">[];</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span></code></pre></div></div></section>
+<section class="slide slide--ink"><div class="inner"><div class="kicker"><span class="pill">Практика · эффект</span> Занятие 02</div><h2>Загружаем задачи при открытии страницы</h2><div class="code-frame"><pre class="code code--sm" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4"></span><span style="color:#DCDCAA">useEffect</span><span style="color:#D4D4D4">(() =&gt; {</span></span>
+<span class="line"><span style="color:#D4D4D4">  </span><span style="color:#C586C0">async</span><span style="color:#D4D4D4"> </span><span style="color:#C586C0">function</span><span style="color:#D4D4D4"> load() {</span></span>
+<span class="line"><span style="color:#D4D4D4">    </span><span style="color:#DCDCAA">setStatus</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">'loading'</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4">    </span><span style="color:#C586C0">try</span><span style="color:#D4D4D4"> {</span></span>
+<span class="line"><span style="color:#D4D4D4">      </span><span style="color:#C586C0">const</span><span style="color:#D4D4D4"> items = </span><span style="color:#C586C0">await</span><span style="color:#D4D4D4"> fetchTodos();</span></span>
+<span class="line"><span style="color:#D4D4D4">      </span><span style="color:#DCDCAA">setTasks</span><span style="color:#D4D4D4">(items);</span></span>
+<span class="line"><span style="color:#D4D4D4">      </span><span style="color:#DCDCAA">setStatus</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">'success'</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#D4D4D4">    } </span><span style="color:#C586C0">catch</span><span style="color:#D4D4D4"> {</span></span>
+<span class="line"><span style="color:#D4D4D4">      </span><span style="color:#DCDCAA">setStatus</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">'error'</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#D4D4D4">    }</span></span>
+<span class="line"><span style="color:#D4D4D4">  }</span></span>
+<span class="line"><span style="color:#D4D4D4"></span></span>
+<span class="line"><span style="color:#D4D4D4">  load();</span></span>
+<span class="line"><span style="color:#D4D4D4">}, []);</span></span></code></pre></div></div></section>
+<section class="slide slide--teal"><div class="inner"><div class="kicker"><span class="pill">Практика</span> Занятие 02</div><h2>Task Tracker получает задачи из API</h2><ul class="dots"><li>Сопоставьте ApiTodo с моделью Task.</li><li>Покажите загрузку, ошибку, пустой ответ и готовый список.</li><li>Добавьте кнопку «Повторить», которая запускает загрузку ещё раз.</li><li>Проверьте Slow 3G, Offline и несуществующий URL в DevTools.</li></ul></div></section>
+<section class="slide slide--teal"><div class="inner"><div class="kicker"><span class="pill">Домашняя работа</span> Занятие 02</div><h2>Самостоятельная загрузка данных</h2><div class="grid-3"><article class="card"><h3>API</h3><p>Выберите другой ресурс, например /users в JSONPlaceholder.</p></article><article class="card"><h3>Компонент</h3><p>Создайте UsersList и выведите имя и email.</p></article><article class="card"><h3>Состояния</h3><p>Реализуйте загрузку, ошибку, пустой ответ и повторную попытку.</p></article></div><ul class="dots"><li>Опишите тип данных пользователя.</li><li>Проверяйте response.ok перед чтением ответа.</li><li>Проверьте загрузку на медленной сети и ошибку в режиме Offline.</li></ul></div></section>
+<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">Итоги и литература</span> Занятие 02</div><h2>Документация на русском языке</h2><div class="grid-2"><article class="card"><h3>React</h3><p><a href="https://ru.react.dev/reference/react/useState">useState</a> · <a href="https://ru.react.dev/reference/react/useEffect">useEffect</a> · <a href="https://ru.react.dev/reference/react/useRef">useRef</a></p><p><a href="https://ru.react.dev/reference/react/useContext">useContext</a> · <a href="https://ru.react.dev/reference/react/useMemo">useMemo</a> · <a href="https://ru.react.dev/reference/react/useCallback">useCallback</a></p></article><article class="card"><h3>Сеть</h3><p><a href="https://developer.mozilla.org/ru/docs/Web/API/Fetch_API/Using_Fetch">MDN · Использование Fetch</a></p><p><a href="https://developer.mozilla.org/ru/docs/Learn_web_development/Extensions/Async_JS/Promises">MDN · async и await</a></p></article></div><div class="fact"><div class="label">Результат</div><p>Вы умеете связать компонент с внешним API и показать пользователю весь процесс получения данных.</p></div></div></section>
+  </main>
+  <script>
+    const slides = [...document.querySelectorAll(".slide")];
+    const bar = document.getElementById("bar");
+    const counter = document.getElementById("counter");
+    const total = slides.length;
+    let i = 0;
+
+    function pad(n) { return String(n).padStart(2, "0"); }
+
+    function go(n) {
+      i = Math.max(0, Math.min(total - 1, n));
+      slides.forEach((s, k) => (s.classList.toggle("is-on", k === i), s.setAttribute("aria-hidden", String(k !== i))));
+      bar.style.width = ((i + 1) / total * 100) + "%";
+      counter.textContent = pad(i + 1) + " / " + pad(total);
+      history.replaceState(null, "", "#" + (i + 1));
+    }
+
+    function fromHash() {
+      const n = parseInt(location.hash.replace("#", ""), 10);
+      if (Number.isFinite(n)) go(n - 1);
+      else go(0);
+    }
+
+    document.querySelector(".nav-hit--prev").addEventListener("click", () => go(i - 1));
+    document.querySelector(".nav-hit--next").addEventListener("click", () => go(i + 1));
+
+    document.addEventListener("keydown", (e) => {
+      if (e.target.closest("input, textarea, select, button, a, [contenteditable]")) return;
+      if (["ArrowRight", "ArrowDown", "PageDown", " ", "Enter"].includes(e.key)) {
+        e.preventDefault();
+        go(i + 1);
+      } else if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace"].includes(e.key)) {
+        e.preventDefault();
+        go(i - 1);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        go(0);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        go(total - 1);
+      } else if (e.key === "f" || e.key === "F") {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+      }
+    });
+
+    let touchX = null;
+    let touchY = null;
+    document.addEventListener("touchstart", (e) => { if (e.target.closest(".code-frame, a, button")) { touchX = null; return; } touchX = e.changedTouches[0].screenX; touchY = e.changedTouches[0].screenY; }, { passive: true });
+    document.addEventListener("touchend", (e) => {
+      if (touchX == null) return;
+      const dx = e.changedTouches[0].screenX - touchX;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(e.changedTouches[0].screenY - touchY)) go(dx < 0 ? i + 1 : i - 1);
+      touchX = null;
+    }, { passive: true });
+
+    window.addEventListener("hashchange", fromHash);
+    fromHash();
+  </script>
+
+<script id="code-tools">
+(() => {
+  const status = document.createElement('div');
+  status.className = 'copy-announcement';
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
+  document.body.append(status);
+  const icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>';
+  function fallback(text) {
+    const active = document.activeElement;
+    const field = document.createElement('textarea');
+    field.value = text;
+    field.setAttribute('aria-label', 'Код для копирования');
+    field.style.cssText = 'position:fixed;left:0;top:0;opacity:0;pointer-events:none';
+    document.body.append(field);
+    field.focus(); field.select();
+    let copied = false;
+    try { copied = document.execCommand('copy'); } catch {}
+    field.remove();
+    active?.focus({ preventScroll: true });
+    return copied;
+  }
+  document.querySelectorAll('.code-frame').forEach(frame => {
+    const code = frame.querySelector('pre.code code');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'code-copy';
+    button.title = 'Скопировать код';
+    button.setAttribute('aria-label', 'Скопировать код');
+    button.innerHTML = icon + '<span class="code-copy-label"></span>';
+    const label = button.querySelector('span');
+    let reset;
+    button.addEventListener('click', async event => {
+      event.stopPropagation();
+      clearTimeout(reset);
+      let copied = false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(code.textContent);
+          copied = true;
+        }
+      } catch {}
+      if (!copied) copied = fallback(code.textContent);
+      const message = copied ? 'Скопировано' : 'Выделено: Ctrl/Cmd+C';
+      if (!copied) {
+        const range = document.createRange();
+        range.selectNodeContents(code);
+        const selection = window.getSelection();
+        selection.removeAllRanges(); selection.addRange(range);
+      }
+      label.textContent = message;
+      button.dataset.state = copied ? 'success' : 'error';
+      button.setAttribute('aria-label', message);
+      status.textContent = '';
+      requestAnimationFrame(() => { status.textContent = message; });
+      reset = setTimeout(() => {
+        label.textContent = '';
+        delete button.dataset.state;
+        button.setAttribute('aria-label', 'Скопировать код');
+      }, 2400);
+    });
+    frame.append(button);
+  });
+})();
+</script>
+</body>
+</html>

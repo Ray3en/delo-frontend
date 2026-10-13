@@ -1,0 +1,245 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Презентации курса Frontend · React от ДЕЛО">
+  <meta name="theme-color" content="#111111">
+  <title>Презентации курса React — ДЕЛО</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111111;
+      --surface: #1b1b1b;
+      --surface-hover: #232323;
+      --text: #f6f2eb;
+      --muted: #aaa59c;
+      --accent: #ff5c35;
+      --line: rgba(255, 255, 255, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background:
+        radial-gradient(circle at 85% 10%, rgba(255, 92, 53, 0.17), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+      font-family: "Onest", system-ui, sans-serif;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 40px));
+      margin: 0 auto;
+      padding: 32px 0 56px;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      font-family: "Unbounded", sans-serif;
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    .course {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    main { padding: clamp(56px, 9vw, 112px) 0; }
+
+    .eyebrow {
+      margin: 0 0 18px;
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      max-width: 880px;
+      margin: 0;
+      font-family: "Unbounded", sans-serif;
+      font-size: clamp(38px, 7vw, 78px);
+      line-height: 1.03;
+      letter-spacing: -0.045em;
+    }
+
+    .intro {
+      max-width: 660px;
+      margin: 26px 0 54px;
+      color: var(--muted);
+      font-size: clamp(17px, 2vw, 21px);
+      line-height: 1.55;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .card {
+      position: relative;
+      display: flex;
+      min-height: 310px;
+      flex-direction: column;
+      justify-content: space-between;
+      overflow: hidden;
+      padding: clamp(26px, 4vw, 42px);
+      border: 1px solid var(--line);
+      border-radius: 26px;
+      background: var(--surface);
+      color: inherit;
+      text-decoration: none;
+      transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+
+    .card::after {
+      position: absolute;
+      right: -32px;
+      bottom: -76px;
+      color: rgba(255, 255, 255, 0.035);
+      content: attr(data-number);
+      font-family: "Unbounded", sans-serif;
+      font-size: 190px;
+      font-weight: 700;
+      line-height: 1;
+      pointer-events: none;
+    }
+
+    .card:hover {
+      transform: translateY(-5px);
+      border-color: rgba(255, 92, 53, 0.75);
+      background: var(--surface-hover);
+    }
+
+    .card:focus-visible {
+      outline: 3px solid var(--accent);
+      outline-offset: 4px;
+    }
+
+    .number {
+      position: relative;
+      z-index: 1;
+      color: var(--accent);
+      font-family: "Unbounded", sans-serif;
+      font-size: 15px;
+    }
+
+    .card-content { position: relative; z-index: 1; }
+
+    h2 {
+      max-width: 470px;
+      margin: 0 0 15px;
+      font-family: "Unbounded", sans-serif;
+      font-size: clamp(23px, 3vw, 34px);
+      line-height: 1.2;
+      letter-spacing: -0.035em;
+    }
+
+    .card p {
+      max-width: 490px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .open {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 28px;
+      font-weight: 700;
+    }
+
+    .arrow {
+      color: var(--accent);
+      font-size: 24px;
+      transition: transform 180ms ease;
+    }
+
+    .card:hover .arrow { transform: translateX(5px); }
+
+    footer {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      padding-top: 24px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 760px) {
+      .page { width: min(100% - 28px, 1180px); padding-top: 22px; }
+      header { align-items: flex-start; flex-direction: column; gap: 8px; }
+      main { padding-top: 52px; }
+      .grid { grid-template-columns: 1fr; }
+      .card { min-height: 280px; }
+      footer { flex-direction: column; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand">ДЕЛО</div>
+      <div class="course">Frontend · React</div>
+    </header>
+
+    <main>
+      <p class="eyebrow">Учебные материалы</p>
+      <h1>Презентации курса React</h1>
+      <p class="intro">Выберите занятие. Презентация откроется в этой вкладке и будет доступна с компьютера, планшета или телефона.</p>
+
+      <nav class="grid" aria-label="Список презентаций">
+        <a class="card" href="./01.html" data-number="01">
+          <span class="number">Занятие 01</span>
+          <div class="card-content">
+            <h2>Введение в React</h2>
+            <p>Создание приложения, JSX, компоненты, props и интерактивный интерфейс Task Tracker.</p>
+            <span class="open">Открыть презентацию <span class="arrow" aria-hidden="true">→</span></span>
+          </div>
+        </a>
+
+        <a class="card" href="./02.html" data-number="02">
+          <span class="number">Занятие 02</span>
+          <div class="card-content">
+            <h2>Хуки и асинхронность</h2>
+            <p>Состояние, эффекты, жизненный цикл компонента и загрузка внешних данных через Fetch API.</p>
+            <span class="open">Открыть презентацию <span class="arrow" aria-hidden="true">→</span></span>
+          </div>
+        </a>
+      </nav>
+    </main>
+
+    <footer>
+      <span>ДЕЛО · Курс Frontend-разработки</span>
+      <span>Материалы открываются прямо в браузере</span>
+    </footer>
+  </div>
+</body>
+</html>
