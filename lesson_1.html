@@ -1,0 +1,856 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Занятие 01. Введение в React — ДЕЛО</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0c1624;
+      --ink-soft: #1a2a3a;
+      --paper: #f3f0e8;
+      --paper-warm: #ebe6da;
+      --accent: #e85d04;
+      --accent-deep: #c44902;
+      --accent-glow: #ffb068;
+      --teal: #0d6e6e;
+      --muted: #5c6b7a;
+      --line: rgba(12, 22, 36, 0.12);
+      --font-display: "Unbounded", sans-serif;
+      --font-body: "Onest", sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: var(--font-body);
+      color: var(--ink);
+      background: #0b1016;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .deck {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(4.25rem, 9vh, 5.5rem) clamp(1.5rem, 5vw, 4.5rem) clamp(3.5rem, 8vh, 4.75rem);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(10px);
+      transition: opacity 0.35s ease, transform 0.35s ease, visibility 0.35s;
+      overflow: hidden;
+    }
+    .slide.is-on {
+      opacity: 1;
+      visibility: visible;
+      transform: none;
+      z-index: 1;
+    }
+
+    .slide--dark { background: #111820; color: var(--paper); }
+    .slide--ink { background: var(--ink); color: var(--paper); }
+    .slide--paper { background: var(--paper); color: var(--ink); }
+    .slide--warm { background: linear-gradient(180deg, var(--paper-warm), var(--paper)); color: var(--ink); }
+    .slide--teal { background: linear-gradient(135deg, #0d3d3d 0%, #0c1624 55%, #1a2433 100%); color: var(--paper); }
+
+    .inner {
+      width: min(1120px, 100%);
+      margin-inline: auto;
+    }
+    .inner--wide { width: min(1240px, 100%); }
+
+    .chrome {
+      position: fixed;
+      z-index: 10;
+      left: 0; right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.05rem clamp(1.5rem, 5vw, 4.5rem);
+      pointer-events: none;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .chrome--top { top: 0; color: var(--ink); }
+    .chrome--bottom { bottom: 0; padding-bottom: 1.15rem; color: var(--muted); }
+    .brand { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.06em; }
+    .brand .x { color: var(--accent); }
+    .hint { font-weight: 500; letter-spacing: 0.04em; text-transform: none; }
+    body:has(.slide--dark.is-on) .chrome--top,
+    body:has(.slide--ink.is-on) .chrome--top,
+    body:has(.slide--teal.is-on) .chrome--top { color: var(--paper); }
+    body:has(.slide--dark.is-on) .chrome--bottom,
+    body:has(.slide--ink.is-on) .chrome--bottom,
+    body:has(.slide--teal.is-on) .chrome--bottom { color: rgba(243, 240, 232, 0.5); }
+
+    .progress {
+      position: fixed;
+      z-index: 11;
+      left: 0; right: 0; bottom: 0;
+      height: 3px;
+      background: rgba(12, 22, 36, 0.18);
+    }
+    .progress > i {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      margin-bottom: 1rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .pill {
+      color: var(--accent-deep);
+      background: rgba(232, 93, 4, 0.12);
+      padding: 0.28rem 0.6rem;
+      border-radius: 999px;
+    }
+    .slide--dark .kicker,
+    .slide--ink .kicker,
+    .slide--teal .kicker { color: rgba(243, 240, 232, 0.5); }
+    .slide--dark .pill,
+    .slide--ink .pill,
+    .slide--teal .pill {
+      color: var(--accent-glow);
+      background: rgba(232, 93, 4, 0.18);
+    }
+
+    .eyebrow {
+      font-family: var(--font-display);
+      font-size: clamp(1.15rem, 2.6vw, 1.7rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.65rem;
+    }
+    h1, h2 {
+      font-family: var(--font-display);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.08;
+    }
+    h1 {
+      font-size: clamp(2.4rem, 7vw, 4.8rem);
+      text-transform: uppercase;
+      max-width: 14ch;
+      margin-bottom: 1.1rem;
+    }
+    h2 {
+      font-size: clamp(1.7rem, 4.2vw, 2.85rem);
+      max-width: 22ch;
+      margin-bottom: 0.85rem;
+    }
+    .lead {
+      font-size: clamp(1.05rem, 2vw, 1.28rem);
+      line-height: 1.45;
+      max-width: 38ch;
+      color: var(--muted);
+    }
+    .slide--dark .lead,
+    .slide--ink .lead,
+    .slide--teal .lead { color: rgba(243, 240, 232, 0.68); }
+
+    .agenda {
+      list-style: none;
+      display: grid;
+      gap: 0;
+    }
+    .agenda li {
+      display: grid;
+      grid-template-columns: 3.4rem 1fr;
+      gap: 1.15rem;
+      padding: 0.72rem 0;
+      border-bottom: 1px solid var(--line);
+      align-items: baseline;
+    }
+    .agenda .n {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 1.05rem;
+    }
+    .agenda .t {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(1.05rem, 2vw, 1.35rem);
+      letter-spacing: -0.02em;
+    }
+    .agenda .d {
+      display: block;
+      margin-top: 0.25rem;
+      color: var(--muted);
+      font-size: 0.98rem;
+      font-weight: 400;
+    }
+
+    .grid-2, .grid-3, .grid-4 {
+      display: grid;
+      gap: clamp(1rem, 2.5vw, 1.6rem);
+      margin-top: 1.75rem;
+    }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .card {
+      padding: clamp(1.15rem, 2.2vw, 1.6rem);
+      border: 1px solid rgba(12, 22, 36, 0.08);
+      background: rgba(255, 255, 255, 0.55);
+      border-radius: 1.35rem;
+      box-shadow: 0 12px 32px rgba(12, 22, 36, 0.06);
+    }
+    .slide--dark .card,
+    .slide--ink .card,
+    .slide--teal .card {
+      background: rgba(243, 240, 232, 0.06);
+      border-color: rgba(243, 240, 232, 0.12);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+    }
+    .card h3 {
+      font-family: var(--font-display);
+      font-size: clamp(1rem, 1.6vw, 1.18rem);
+      font-weight: 700;
+      margin-bottom: 0.45rem;
+      letter-spacing: -0.02em;
+    }
+    .slide--dark .card h3 { color: var(--accent-glow); }
+    .card p { color: var(--muted); font-size: 0.98rem; line-height: 1.45; }
+    .slide--dark .card p,
+    .slide--ink .card p,
+    .slide--teal .card p { color: rgba(243, 240, 232, 0.68); }
+
+    .path {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem 0.35rem;
+      margin-top: 1.75rem;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+    }
+    .path span {
+      padding: 0.45rem 0.7rem;
+      border: 1px solid rgba(243, 240, 232, 0.16);
+      color: rgba(243, 240, 232, 0.55);
+    }
+    .path .now {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .path .sep { border: 0; padding: 0 0.15rem; color: var(--accent); }
+
+    .code {
+      --win-bar: 1.85rem;
+      position: relative;
+      margin-top: 1.5rem;
+      padding: calc(var(--win-bar) + 0.95rem) 1.35rem 1.1rem;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: clamp(0.92rem, 1.4vw, 1.08rem);
+      line-height: 1.55;
+      color: #e8e4da;
+      overflow: auto;
+      border-radius: 14px;
+      background: #1c1c1e;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.08) inset,
+        0 18px 44px rgba(12, 22, 36, 0.28);
+    }
+    .code::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--win-bar);
+      border-radius: 14px 14px 0 0;
+      background: linear-gradient(180deg, #3a3a3c, #2c2c2e);
+      box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+    }
+    .code::after {
+      content: "";
+      position: absolute;
+      top: calc((var(--win-bar) - 10px) / 2);
+      left: 0.85rem;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ff5f57;
+      box-shadow:
+        16px 0 0 #febc2e,
+        32px 0 0 #28c840;
+    }
+    .code--sm {
+      --win-bar: 1.55rem;
+      margin-top: 0.85rem;
+      padding: calc(var(--win-bar) + 0.7rem) 0.95rem 0.8rem;
+      font-size: clamp(0.78rem, 1.15vw, 0.9rem);
+      line-height: 1.45;
+      border-radius: 12px;
+    }
+    .code--sm::before { border-radius: 12px 12px 0 0; }
+    .code--sm::after {
+      width: 8px;
+      height: 8px;
+      top: calc((var(--win-bar) - 8px) / 2);
+      left: 0.75rem;
+      box-shadow:
+        13px 0 0 #febc2e,
+        26px 0 0 #28c840;
+    }
+    .card .code { margin-bottom: 0; }
+    .fact {
+      margin-top: 1.15rem;
+      padding: 0.95rem 1.15rem;
+      border-left: 3px solid var(--accent);
+      background: rgba(232, 93, 4, 0.08);
+      border-radius: 0 1rem 1rem 0;
+    }
+    .fact .label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-deep);
+      margin-bottom: 0.35rem;
+    }
+    .fact p {
+      font-size: 1.02rem;
+      line-height: 1.4;
+      color: var(--ink-soft);
+      max-width: 54ch;
+    }
+    .grid-2--tight {
+      margin-top: 1.15rem;
+      gap: 0.9rem;
+    }
+    .sig {
+      display: grid;
+      grid-template-columns: auto 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+    .sig-part {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      padding: 0.75rem 0.9rem 0.85rem;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.28);
+      min-width: 0;
+      border-radius: 1rem;
+    }
+    .sig-part--in { border-color: rgba(13, 110, 110, 0.35); }
+    .sig-part--out { border-color: rgba(232, 93, 4, 0.35); }
+    .sig-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .sig-part--in .sig-label { color: var(--teal); }
+    .sig-part--out .sig-label { color: var(--accent-deep); }
+    .sig-code {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.3;
+    }
+    .kw { color: #ff9f5a; }
+    .fn { color: #7ecfcf; }
+    .st { color: #c9e39b; }
+    .cm { color: rgba(243, 240, 232, 0.38); }
+    .tp { color: #9ec5ff; }
+    .num { color: #e8c27a; }
+    .card code, .lead code, p code, h3 code {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.92em;
+      color: var(--accent-deep);
+    }
+    .slide--dark .card code,
+    .slide--ink .card code,
+    .slide--teal .card code,
+    .slide--dark .lead code,
+    .slide--ink .lead code,
+    .slide--teal .lead code { color: var(--accent-glow); }
+
+    .dots {
+      list-style: none;
+      display: grid;
+      gap: 0.85rem;
+      margin-top: 1.25rem;
+      max-width: 46rem;
+    }
+    .dots li {
+      position: relative;
+      padding-left: 1.2rem;
+      font-size: 1.12rem;
+      line-height: 1.45;
+      color: var(--ink-soft);
+    }
+    .dots li::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 0.58em;
+      width: 0.45rem; height: 0.45rem;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .slide--dark .dots li,
+    .slide--ink .dots li,
+    .slide--teal .dots li { color: rgba(243, 240, 232, 0.78); }
+
+    .practice {
+      margin-top: 1.75rem;
+      padding: 1.35rem 1.5rem;
+      border: 1px solid rgba(243, 240, 232, 0.16);
+      background: rgba(232, 93, 4, 0.12);
+      border-radius: 1.15rem;
+    }
+    .practice .label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-glow);
+      margin-bottom: 0.45rem;
+    }
+    .practice p { font-size: 1.12rem; line-height: 1.4; max-width: 42ch; }
+
+    .nav-hit {
+      position: fixed;
+      top: 0; bottom: 3px;
+      width: 18%;
+      z-index: 8;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+    }
+    .nav-hit--prev { left: 0; }
+    .nav-hit--next { right: 0; }
+
+    @media (max-width: 860px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .agenda li { grid-template-columns: 2.4rem 1fr; }
+      .chrome .hint { display: none; }
+      h1 { max-width: none; }
+    }
+
+    .slide { overflow-y: auto; }
+    .inner { flex-shrink: 0; }
+    .code { white-space: pre; tab-size: 2; }
+    .grid-2 > *, .grid-3 > * { min-width: 0; }
+    a { color: var(--accent-deep); text-underline-offset: 4px; }
+    .slide--ink a, .slide--dark a { color: var(--accent-glow); }
+    .nav-hit { top: auto; bottom: 0.55rem; width: 3rem; height: 2.6rem; z-index: 12; color: var(--accent); font-size: 1.5rem; border-radius: 0.5rem; }
+    .nav-hit--prev { left: calc(50% - 3.5rem); }
+    .nav-hit--next { right: calc(50% - 3.5rem); }
+    .nav-hit:focus-visible { outline: 2px solid var(--accent); }
+    @media (max-width: 860px), (max-height: 650px) {
+      .slide { justify-content: flex-start; }
+      .grid-2, .grid-3, .grid-4 { gap: 0.8rem; margin-top: 1rem; }
+    }
+    @media (prefers-reduced-motion: reduce) { .slide, .progress > i { transition: none; } }
+    @media print {
+      html, body { height: auto; overflow: visible; background: white; }
+      .chrome, .progress, .nav-hit { display: none; }
+      .deck { height: auto; }
+      .slide { position: relative; opacity: 1; visibility: visible; transform: none; min-height: 100vh; break-after: page; overflow: visible; print-color-adjust: exact; }
+    }
+  
+/* code-tools:start */
+.code-frame { position: relative; margin-top: 1.5rem; min-width: 0; }
+.code-frame .code { margin-top: 0; color: #d4d4d4; background: #1e1e1e; }
+.code-frame .code code { color: #d4d4d4; font: inherit; }
+.code-copy { position: absolute; z-index: 3; top: 2px; right: 8px; height: 26px; min-width: 30px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 2px 7px; border: 1px solid transparent; border-radius: 5px; background: #303033; color: #d4d4d4; cursor: pointer; font: 11px/1.2 var(--font-body); }
+.code-copy:hover { background: #454549; color: white; border-color: #707074; }
+.code-copy:focus-visible { outline: 2px solid #ffb068; outline-offset: 2px; }
+.code-copy svg { width: 15px; height: 15px; flex-shrink: 0; }
+.code-copy[data-state="success"] { color: #b5cea8; }
+.code-copy[data-state="error"] { color: #ffb068; }
+.code-copy-label:empty { display: none; }
+.copy-announcement { position: fixed; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (pointer: coarse) { .code-copy { min-width: 44px; } }
+@media print { .code-copy, .copy-announcement { display: none; } }
+/* code-tools:end */
+
+
+/* dark-callouts:start */
+:is(.slide--dark, .slide--ink, .slide--teal) .fact {
+  color: #f3f0e8;
+  background: #243044;
+  border: 1px solid #536079;
+  border-left: 4px solid #ffb068;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+:is(.slide--dark, .slide--ink, .slide--teal) .fact p,
+:is(.slide--dark, .slide--ink, .slide--teal) .fact li {
+  color: #f3f0e8;
+}
+:is(.slide--dark, .slide--ink, .slide--teal) .fact .label {
+  color: #ffb068;
+}
+:is(.slide--dark, .slide--ink, .slide--teal) .fact a {
+  color: #a8daff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+:is(.slide--dark, .slide--ink, .slide--teal) .fact code {
+  color: #ffe0ba;
+  background: #192231;
+  padding: 0.08em 0.28em;
+  border-radius: 0.25rem;
+}
+:is(.slide--dark, .slide--ink, .slide--teal) .fact a:hover { color: #ffffff; }
+/* dark-callouts:end */
+</style>
+</head>
+<body>
+  <div class="chrome chrome--top">
+    <div class="brand">Дело <span class="x">·</span> Frontend</div>
+    <div class="meta">Занятие 01</div>
+  </div>
+  <div class="chrome chrome--bottom">
+    <div class="hint">← → или пробел</div>
+    <div class="counter" id="counter">01 / 30</div>
+  </div>
+  <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+
+  <button class="nav-hit nav-hit--prev" type="button" aria-label="Предыдущий слайд">←</button>
+  <button class="nav-hit nav-hit--next" type="button" aria-label="Следующий слайд">→</button>
+
+  <main class="deck" id="deck">
+<section class="slide slide--dark is-on"><div class="inner"><div class="kicker"><span class="pill">Frontend · React</span> Занятие 01</div><p class="eyebrow">ДЕЛО</p><h1>Введение<br>в React</h1><p class="lead">Создаём приложение, осваиваем JSX и превращаем список задач в интерактивный интерфейс.</p><div class="path"><span class="now">React</span><b class="sep">→</b><span>Vite + TypeScript</span><b class="sep">→</b><span>Task Tracker</span></div></div></section>
+
+<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">О занятии</span> Занятие 01</div><h2>От компонентов к интерфейсу</h2><p class="lead">React помогает описывать интерфейс через компоненты и данные. Сегодня пройдём этот путь на небольшом приложении.</p><div class="grid-2"><article class="card"><h3>Цель</h3><p>Понять устройство React-приложения и научиться создавать простые интерактивные компоненты.</p></article><article class="card"><h3>Результат</h3><p>Запущенный Task Tracker: поле ввода, кнопка добавления и обновляемый список задач.</p></article></div></div></section>
+
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Маршрут</span> Занятие 01</div><h2>Что разберём</h2><ol class="agenda"><li><span class="n">01</span><div class="t">React и компоненты<span class="d">Как разбить интерфейс на небольшие части</span></div></li><li><span class="n">02</span><div class="t">Первый проект<span class="d">Vite, TypeScript и структура приложения</span></div></li><li><span class="n">03</span><div class="t">JSX и данные<span class="d">Разметка, выражения, props и списки</span></div></li><li><span class="n">04</span><div class="t">Состояние и события<span class="d">useState и обновление интерфейса</span></div></li><li><span class="n">05</span><div class="t">Практика<span class="d">Собираем базовый Task Tracker</span></div></li></ol></div></section>
+
+<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">React</span> Занятие 01</div><h2>Интерфейс как функция данных</h2><div class="grid-3"><article class="card"><h3>Компоненты</h3><p>Кнопка, форма, карточка задачи — отдельные части интерфейса, которые можно переиспользовать.</p></article><article class="card"><h3>Декларативность</h3><p>Описываем, что показать для текущих данных. React применяет необходимые изменения к DOM.</p></article><article class="card"><h3>Состояние</h3><p>Компонент хранит данные между рендерами. Их обновление через setter запрашивает новый рендер.</p></article></div></div></section>
+
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Компонентный подход</span> Занятие 01</div><h2>Разбиваем страницу на части</h2><div class="code-frame"><pre class="code" data-language="text"><code><span class="line"><span>App</span></span>
+<span class="line"><span>├── Header</span></span>
+<span class="line"><span>└── TaskTracker</span></span>
+<span class="line"><span>    ├── форма добавления</span></span>
+<span class="line"><span>    └── TaskList</span></span>
+<span class="line"><span>        └── TaskItem × N</span></span></code></pre></div><div class="fact"><div class="label">Обратите внимание</div><p>Компонент выделяют по смыслу и повторному использованию. Не каждый HTML-тег должен стать компонентом.</p></div></div></section>
+
+<section class="slide slide--dark"><div class="inner"><div class="kicker"><span class="pill">Инструменты</span> Занятие 01</div><h2>У каждого своя роль</h2><div class="grid-3"><article class="card"><h3>React</h3><p>Компоненты, состояние и обновление интерфейса.</p></article><article class="card"><h3>TypeScript</h3><p>Типы данных и проверка ошибок до запуска. В браузере выполняется JavaScript.</p></article><article class="card"><h3>Vite</h3><p>Создание стартового проекта, сервер разработки и сборка приложения.</p></article></div></div></section>
+
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Окружение</span> Занятие 01</div><h2>Готовимся к запуску</h2><ul class="dots"><li>Понадобятся редактор кода, терминал, браузер и Node.js с npm.</li><li>Установите актуальную LTS-версию Node.js с <a href="https://nodejs.org/">nodejs.org</a>.</li><li>Vite указывает минимум Node.js 20.19+ или 22.12+; учитывайте требования выбранного шаблона.</li></ul><div class="code-frame"><pre class="code" data-language="bash"><code><span class="line"><span style="color:#DCDCAA">node</span><span style="color:#569CD6"> --version</span></span>
+<span class="line"><span style="color:#DCDCAA">npm</span><span style="color:#569CD6"> --version</span></span></code></pre></div></div></section>
+
+<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">Первый проект</span> Занятие 01</div><h2>Создаём React + TypeScript</h2><div class="code-frame"><pre class="code" data-language="bash"><code><span class="line"><span style="color:#DCDCAA">npm</span><span style="color:#CE9178"> create</span><span style="color:#CE9178"> vite@latest</span><span style="color:#CE9178"> task-tracker</span><span style="color:#569CD6"> --</span><span style="color:#569CD6"> --template</span><span style="color:#CE9178"> react-ts</span></span>
+<span class="line"><span style="color:#DCDCAA">cd</span><span style="color:#CE9178"> task-tracker</span></span>
+<span class="line"><span style="color:#DCDCAA">npm</span><span style="color:#CE9178"> install</span></span>
+<span class="line"><span style="color:#DCDCAA">npm</span><span style="color:#CE9178"> run</span><span style="color:#CE9178"> dev</span></span></code></pre></div><div class="fact"><div class="label">Обратите внимание</div><p>Откройте адрес Local из терминала. Обычно это http://localhost:5173. Сервер оставьте запущенным; остановка — Ctrl + C.</p></div></div></section>
+
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Структура</span> Занятие 01</div><h2>Где будем писать код</h2><div class="code-frame"><pre class="code" data-language="text"><code><span class="line"><span>task-tracker/</span></span>
+<span class="line"><span>├── index.html       # HTML с контейнером root</span></span>
+<span class="line"><span>├── package.json     # зависимости и команды</span></span>
+<span class="line"><span>└── src/</span></span>
+<span class="line"><span>    ├── main.tsx     # подключает React к странице</span></span>
+<span class="line"><span>    ├── App.tsx      # главный компонент</span></span>
+<span class="line"><span>    ├── App.css      # стили компонента</span></span>
+<span class="line"><span>    └── index.css    # общие стили</span></span></code></pre></div><div class="fact"><div class="label">Обратите внимание</div><p>Файлы с TypeScript и JSX имеют расширение .tsx. Для первого примера замените содержимое App.tsx; оформление добавим позже.</p></div></div></section>
+
+<section class="slide slide--ink"><div class="inner"><div class="kicker"><span class="pill">Компонент</span> Занятие 01</div><h2>Функция, которая возвращает JSX</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#C586C0">export</span><span style="color:#C586C0"> default</span><span style="color:#569CD6"> function</span><span style="color:#DCDCAA"> App</span><span style="color:#D4D4D4">() {</span></span>
+<span class="line"><span style="color:#C586C0">  return</span><span style="color:#D4D4D4"> (</span></span>
+<span class="line"><span style="color:#808080">    &#x3C;</span><span style="color:#569CD6">main</span><span style="color:#808080">></span></span>
+<span class="line"><span style="color:#808080">      &#x3C;</span><span style="color:#569CD6">h1</span><span style="color:#808080">></span><span style="color:#D4D4D4">Task Tracker</span><span style="color:#808080">&#x3C;/</span><span style="color:#569CD6">h1</span><span style="color:#808080">></span></span>
+<span class="line"><span style="color:#808080">      &#x3C;</span><span style="color:#569CD6">p</span><span style="color:#808080">></span><span style="color:#D4D4D4">Моё первое React-приложение</span><span style="color:#808080">&#x3C;/</span><span style="color:#569CD6">p</span><span style="color:#808080">></span></span>
+<span class="line"><span style="color:#808080">    &#x3C;/</span><span style="color:#569CD6">main</span><span style="color:#808080">></span></span>
+<span class="line"><span style="color:#D4D4D4">  );</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span></code></pre></div><ul class="dots"><li>Имя компонента начинается с большой буквы: App, TaskItem.</li><li>Компонент используем как тег: <code>&lt;App /&gt;</code>. Сохраните файл и посмотрите результат.</li></ul></div></section>
+
+<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">JSX</span> Занятие 01</div><h2>Похож на HTML, но это JSX</h2><div class="grid-3"><article class="card"><h3>Один корень</h3><p>Оборачивайте соседние элементы в общий тег или фрагмент &lt;&gt;…&lt;/&gt;.</p></article><article class="card"><h3>Закрытые теги</h3><p>Закрывайте все теги, включая одиночные: &lt;input /&gt;.</p></article><article class="card"><h3>Имена атрибутов</h3><p>className вместо class, htmlFor вместо for. События пишутся в camelCase: onClick.</p></article></div><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#808080">&#x3C;></span></span>
+<span class="line"><span style="color:#808080">  &#x3C;</span><span style="color:#569CD6">label</span><span style="color:#9CDCFE"> htmlFor</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">"task"</span><span style="color:#808080">></span><span style="color:#D4D4D4">Новая задача</span><span style="color:#808080">&#x3C;/</span><span style="color:#569CD6">label</span><span style="color:#808080">></span></span>
+<span class="line"><span style="color:#808080">  &#x3C;</span><span style="color:#569CD6">input</span><span style="color:#9CDCFE"> id</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">"task"</span><span style="color:#9CDCFE"> className</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">"task-input"</span><span style="color:#808080"> /></span></span>
+<span class="line"><span style="color:#808080">&#x3C;/></span></span></code></pre></div></div></section>
+
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">JSX</span> Занятие 01</div><h2>Данные внутри фигурных скобок</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#C586C0">export</span><span style="color:#C586C0"> default</span><span style="color:#569CD6"> function</span><span style="color:#DCDCAA"> App</span><span style="color:#D4D4D4">() {</span></span>
+<span class="line"><span style="color:#569CD6">  const</span><span style="color:#4FC1FF"> name</span><span style="color:#D4D4D4"> = </span><span style="color:#CE9178">"Анна"</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#569CD6">  const</span><span style="color:#4FC1FF"> count</span><span style="color:#D4D4D4"> = </span><span style="color:#B5CEA8">3</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#C586C0">  return</span><span style="color:#808080"> &#x3C;</span><span style="color:#569CD6">h1</span><span style="color:#808080">></span><span style="color:#569CD6">{</span><span style="color:#9CDCFE">name</span><span style="color:#569CD6">}</span><span style="color:#D4D4D4">, задач на сегодня: </span><span style="color:#569CD6">{</span><span style="color:#9CDCFE">count</span><span style="color:#D4D4D4"> + </span><span style="color:#B5CEA8">1</span><span style="color:#569CD6">}</span><span style="color:#808080">&#x3C;/</span><span style="color:#569CD6">h1</span><span style="color:#808080">></span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span></code></pre></div><div class="fact"><div class="label">Обратите внимание</div><p>В { } можно подставить выражение: переменную, вызов функции или вычисление. Объект целиком не выводят: используйте его поля.</p></div></div></section>
+
+<section class="slide slide--ink"><div class="inner"><div class="kicker"><span class="pill">Props</span> Занятие 01</div><h2>Передаём данные в компонент</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#569CD6">type</span><span style="color:#4EC9B0"> TaskItemProps</span><span style="color:#D4D4D4"> = { </span><span style="color:#9CDCFE">title</span><span style="color:#D4D4D4">: </span><span style="color:#4EC9B0">string</span><span style="color:#D4D4D4"> };</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#569CD6">function</span><span style="color:#DCDCAA"> TaskItem</span><span style="color:#D4D4D4">({ </span><span style="color:#9CDCFE">title</span><span style="color:#D4D4D4"> }: </span><span style="color:#4EC9B0">TaskItemProps</span><span style="color:#D4D4D4">) {</span></span>
+<span class="line"><span style="color:#C586C0">  return</span><span style="color:#808080"> &#x3C;</span><span style="color:#569CD6">li</span><span style="color:#808080">></span><span style="color:#569CD6">{</span><span style="color:#9CDCFE">title</span><span style="color:#569CD6">}</span><span style="color:#808080">&#x3C;/</span><span style="color:#569CD6">li</span><span style="color:#808080">></span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#C586C0">export</span><span style="color:#C586C0"> default</span><span style="color:#569CD6"> function</span><span style="color:#DCDCAA"> App</span><span style="color:#D4D4D4">() {</span></span>
+<span class="line"><span style="color:#C586C0">  return</span><span style="color:#808080"> &#x3C;</span><span style="color:#569CD6">ul</span><span style="color:#808080">>&#x3C;</span><span style="color:#4EC9B0">TaskItem</span><span style="color:#9CDCFE"> title</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">"Изучить JSX"</span><span style="color:#808080"> />&#x3C;/</span><span style="color:#569CD6">ul</span><span style="color:#808080">></span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span></code></pre></div><div class="fact"><div class="label">Обратите внимание</div><p>Props приходят от родителя. Компонент читает их, но не изменяет. Тип описывает, какие данные ожидаются.</p></div></div></section>
+
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Списки</span> Занятие 01</div><h2>Массив превращается в элементы</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#569CD6">const</span><span style="color:#4FC1FF"> tasks</span><span style="color:#D4D4D4"> = [</span></span>
+<span class="line"><span style="color:#D4D4D4">  { </span><span style="color:#9CDCFE">id:</span><span style="color:#CE9178"> "1"</span><span style="color:#D4D4D4">, </span><span style="color:#9CDCFE">title:</span><span style="color:#CE9178"> "Создать проект"</span><span style="color:#D4D4D4"> },</span></span>
+<span class="line"><span style="color:#D4D4D4">  { </span><span style="color:#9CDCFE">id:</span><span style="color:#CE9178"> "2"</span><span style="color:#D4D4D4">, </span><span style="color:#9CDCFE">title:</span><span style="color:#CE9178"> "Изучить JSX"</span><span style="color:#D4D4D4"> },</span></span>
+<span class="line"><span style="color:#D4D4D4">];</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">// В JSX компонента:</span></span>
+<span class="line"><span style="color:#808080">&#x3C;</span><span style="color:#569CD6">ul</span><span style="color:#808080">></span></span>
+<span class="line"><span style="color:#569CD6">  {</span><span style="color:#9CDCFE">tasks</span><span style="color:#D4D4D4">.</span><span style="color:#DCDCAA">map</span><span style="color:#D4D4D4">(</span><span style="color:#9CDCFE">task</span><span style="color:#569CD6"> =></span><span style="color:#D4D4D4"> (</span></span>
+<span class="line"><span style="color:#808080">    &#x3C;</span><span style="color:#4EC9B0">TaskItem</span><span style="color:#9CDCFE"> key</span><span style="color:#D4D4D4">=</span><span style="color:#569CD6">{</span><span style="color:#9CDCFE">task</span><span style="color:#D4D4D4">.</span><span style="color:#9CDCFE">id</span><span style="color:#569CD6">}</span><span style="color:#9CDCFE"> title</span><span style="color:#D4D4D4">=</span><span style="color:#569CD6">{</span><span style="color:#9CDCFE">task</span><span style="color:#D4D4D4">.</span><span style="color:#9CDCFE">title</span><span style="color:#569CD6">}</span><span style="color:#808080"> /></span></span>
+<span class="line"><span style="color:#D4D4D4">  ))</span><span style="color:#569CD6">}</span></span>
+<span class="line"><span style="color:#808080">&#x3C;/</span><span style="color:#569CD6">ul</span><span style="color:#808080">></span></span></code></pre></div><div class="fact"><div class="label">Обратите внимание</div><p>key — устойчивый идентификатор среди соседних элементов. Не создавайте случайный key при рендере и не используйте индекс для изменяемого списка.</p></div></div></section>
+
+<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">События</span> Занятие 01</div><h2>Передаём обработчик</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#569CD6">function</span><span style="color:#DCDCAA"> HelloButton</span><span style="color:#D4D4D4">() {</span></span>
+<span class="line"><span style="color:#569CD6">  function</span><span style="color:#DCDCAA"> handleClick</span><span style="color:#D4D4D4">() {</span></span>
+<span class="line"><span style="color:#DCDCAA">    alert</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">"Привет, React!"</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#D4D4D4">  }</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#C586C0">  return</span><span style="color:#808080"> &#x3C;</span><span style="color:#569CD6">button</span><span style="color:#9CDCFE"> onClick</span><span style="color:#D4D4D4">=</span><span style="color:#569CD6">{</span><span style="color:#9CDCFE">handleClick</span><span style="color:#569CD6">}</span><span style="color:#808080">></span><span style="color:#D4D4D4">Нажми меня</span><span style="color:#808080">&#x3C;/</span><span style="color:#569CD6">button</span><span style="color:#808080">></span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span></code></pre></div><div class="grid-2"><article class="card"><h3>Верно</h3><p>onClick={handleClick} — функция будет вызвана при клике.</p></article><article class="card"><h3>Ошибка</h3><p>onClick={handleClick()} — функция вызывается уже во время рендера.</p></article></div></div></section>
+
+<section class="slide slide--ink"><div class="inner"><div class="kicker"><span class="pill">Состояние</span> Занятие 01</div><h2>useState: память компонента</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#C586C0">import</span><span style="color:#D4D4D4"> { </span><span style="color:#9CDCFE">useState</span><span style="color:#D4D4D4"> } </span><span style="color:#C586C0">from</span><span style="color:#CE9178"> "react"</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#C586C0">export</span><span style="color:#C586C0"> default</span><span style="color:#569CD6"> function</span><span style="color:#DCDCAA"> Counter</span><span style="color:#D4D4D4">() {</span></span>
+<span class="line"><span style="color:#569CD6">  const</span><span style="color:#D4D4D4"> [</span><span style="color:#4FC1FF">count</span><span style="color:#D4D4D4">, </span><span style="color:#4FC1FF">setCount</span><span style="color:#D4D4D4">] = </span><span style="color:#DCDCAA">useState</span><span style="color:#D4D4D4">(</span><span style="color:#B5CEA8">0</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#C586C0">  return</span><span style="color:#D4D4D4"> (</span></span>
+<span class="line"><span style="color:#808080">    &#x3C;</span><span style="color:#569CD6">button</span><span style="color:#9CDCFE"> onClick</span><span style="color:#D4D4D4">=</span><span style="color:#569CD6">{</span><span style="color:#D4D4D4">() </span><span style="color:#569CD6">=></span><span style="color:#DCDCAA"> setCount</span><span style="color:#D4D4D4">(</span><span style="color:#9CDCFE">prev</span><span style="color:#569CD6"> =></span><span style="color:#9CDCFE"> prev</span><span style="color:#D4D4D4"> + </span><span style="color:#B5CEA8">1</span><span style="color:#D4D4D4">)</span><span style="color:#569CD6">}</span><span style="color:#808080">></span></span>
+<span class="line"><span style="color:#D4D4D4">      Нажали: </span><span style="color:#569CD6">{</span><span style="color:#9CDCFE">count</span><span style="color:#569CD6">}</span></span>
+<span class="line"><span style="color:#808080">    &#x3C;/</span><span style="color:#569CD6">button</span><span style="color:#808080">></span></span>
+<span class="line"><span style="color:#D4D4D4">  );</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span></code></pre></div><ul class="dots"><li>count — значение текущего рендера; setCount — функция обновления.</li><li>Хуки вызывают на верхнем уровне компонента, вне условий и циклов.</li></ul></div></section>
+
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Рендер</span> Занятие 01</div><h2>Что происходит после клика</h2><div class="grid-3"><article class="card"><h3>01 · Событие</h3><p>Пользователь нажимает кнопку. Обработчик вызывает setCount.</p></article><article class="card"><h3>02 · Рендер</h3><p>React снова вызывает компонент с новым состоянием и получает JSX.</p></article><article class="card"><h3>03 · Обновление DOM</h3><p>React применяет необходимые изменения. Браузер отображает новый результат.</p></article></div><div class="fact"><div class="label">Обратите внимание</div><p>Обычная переменная не запрашивает рендер. Setter задаёт состояние для следующего рендера: в текущем обработчике значение остаётся прежним.</p></div></div></section>
+
+<section class="slide slide--teal"><div class="inner"><div class="kicker"><span class="pill">Мини-практика</span> Занятие 01</div><h2>Проверяем понимание</h2><ul class="dots"><li>Добавьте к счётчику кнопку «Сбросить», которая устанавливает 0.</li><li>Что произойдёт, если вместо setCount просто изменить обычную переменную?</li><li>Почему onClick принимает функцию, а не результат её вызова?</li><li>Где хранить текст поля ввода, если от него зависит интерфейс?</li></ul></div></section>
+
+<section class="slide slide--teal"><div class="inner"><div class="kicker"><span class="pill">Практика</span> Занятие 01</div><h2>Собираем Task Tracker</h2><p class="lead">Минимальная версия: пользователь вводит текст и добавляет задачу в список без перезагрузки страницы.</p><ul class="dots"><li>Храним массив задач и текст поля в состоянии.</li><li>Выводим задачи отдельными компонентами TaskItem.</li><li>Добавляем задачу через форму; пустой ввод игнорируем.</li><li>После добавления очищаем поле. Данные пока живут только в памяти.</li></ul></div></section>
+
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Практика · 01</span> Занятие 01</div><h2>Описываем данные</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#569CD6">type</span><span style="color:#4EC9B0"> Task</span><span style="color:#D4D4D4"> = {</span></span>
+<span class="line"><span style="color:#9CDCFE">  id</span><span style="color:#D4D4D4">: </span><span style="color:#4EC9B0">string</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#9CDCFE">  title</span><span style="color:#D4D4D4">: </span><span style="color:#4EC9B0">string</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#9CDCFE">  done</span><span style="color:#D4D4D4">: </span><span style="color:#4EC9B0">boolean</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#D4D4D4">};</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">// Внутри App:</span></span>
+<span class="line"><span style="color:#569CD6">const</span><span style="color:#D4D4D4"> [</span><span style="color:#4FC1FF">tasks</span><span style="color:#D4D4D4">, </span><span style="color:#4FC1FF">setTasks</span><span style="color:#D4D4D4">] = </span><span style="color:#DCDCAA">useState</span><span style="color:#D4D4D4">&#x3C;</span><span style="color:#4EC9B0">Task</span><span style="color:#D4D4D4">[]>([]);</span></span>
+<span class="line"><span style="color:#569CD6">const</span><span style="color:#D4D4D4"> [</span><span style="color:#4FC1FF">title</span><span style="color:#D4D4D4">, </span><span style="color:#4FC1FF">setTitle</span><span style="color:#D4D4D4">] = </span><span style="color:#DCDCAA">useState</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">""</span><span style="color:#D4D4D4">);</span></span></code></pre></div><div class="fact"><div class="label">Обратите внимание</div><p>Task[] означает массив задач. Поле done подготовим для домашней работы. useState("") определяет тип текста автоматически.</p></div></div></section>
+
+<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">Практика · 02</span> Занятие 01</div><h2>Поле под контролем React</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#808080">&#x3C;</span><span style="color:#569CD6">label</span><span style="color:#9CDCFE"> htmlFor</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">"task-title"</span><span style="color:#808080">></span><span style="color:#D4D4D4">Новая задача</span><span style="color:#808080">&#x3C;/</span><span style="color:#569CD6">label</span><span style="color:#808080">></span></span>
+<span class="line"><span style="color:#808080">&#x3C;</span><span style="color:#569CD6">input</span></span>
+<span class="line"><span style="color:#9CDCFE">  id</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">"task-title"</span></span>
+<span class="line"><span style="color:#9CDCFE">  value</span><span style="color:#D4D4D4">=</span><span style="color:#569CD6">{</span><span style="color:#9CDCFE">title</span><span style="color:#569CD6">}</span></span>
+<span class="line"><span style="color:#9CDCFE">  onChange</span><span style="color:#D4D4D4">=</span><span style="color:#569CD6">{</span><span style="color:#9CDCFE">event</span><span style="color:#569CD6"> =></span><span style="color:#DCDCAA"> setTitle</span><span style="color:#D4D4D4">(</span><span style="color:#9CDCFE">event</span><span style="color:#D4D4D4">.</span><span style="color:#9CDCFE">target</span><span style="color:#D4D4D4">.</span><span style="color:#9CDCFE">value</span><span style="color:#D4D4D4">)</span><span style="color:#569CD6">}</span></span>
+<span class="line"><span style="color:#9CDCFE">  placeholder</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">"Например, изучить JSX"</span></span>
+<span class="line"><span style="color:#808080">/></span></span></code></pre></div><ul class="dots"><li>value показывает текущее состояние; onChange обновляет его при вводе.</li><li>Этот фрагмент помещается внутрь JSX, который возвращает App.</li></ul></div></section>
+
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Практика · 03</span> Занятие 01</div><h2>Добавляем новую задачу</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#6A9955">// Внутри App, до return:</span></span>
+<span class="line"><span style="color:#569CD6">function</span><span style="color:#DCDCAA"> addTask</span><span style="color:#D4D4D4">() {</span></span>
+<span class="line"><span style="color:#569CD6">  const</span><span style="color:#4FC1FF"> trimmed</span><span style="color:#D4D4D4"> = </span><span style="color:#9CDCFE">title</span><span style="color:#D4D4D4">.</span><span style="color:#DCDCAA">trim</span><span style="color:#D4D4D4">();</span></span>
+<span class="line"><span style="color:#C586C0">  if</span><span style="color:#D4D4D4"> (!</span><span style="color:#9CDCFE">trimmed</span><span style="color:#D4D4D4">) </span><span style="color:#C586C0">return</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#569CD6">  const</span><span style="color:#4FC1FF"> newTask</span><span style="color:#D4D4D4">: </span><span style="color:#4EC9B0">Task</span><span style="color:#D4D4D4"> = {</span></span>
+<span class="line"><span style="color:#9CDCFE">    id:</span><span style="color:#9CDCFE"> crypto</span><span style="color:#D4D4D4">.</span><span style="color:#DCDCAA">randomUUID</span><span style="color:#D4D4D4">(),</span></span>
+<span class="line"><span style="color:#9CDCFE">    title:</span><span style="color:#9CDCFE"> trimmed</span><span style="color:#D4D4D4">,</span></span>
+<span class="line"><span style="color:#9CDCFE">    done:</span><span style="color:#569CD6"> false</span><span style="color:#D4D4D4">,</span></span>
+<span class="line"><span style="color:#D4D4D4">  };</span></span>
+<span class="line"><span style="color:#DCDCAA">  setTasks</span><span style="color:#D4D4D4">(</span><span style="color:#9CDCFE">prev</span><span style="color:#569CD6"> =></span><span style="color:#D4D4D4"> [...</span><span style="color:#9CDCFE">prev</span><span style="color:#D4D4D4">, </span><span style="color:#9CDCFE">newTask</span><span style="color:#D4D4D4">]);</span></span>
+<span class="line"><span style="color:#DCDCAA">  setTitle</span><span style="color:#D4D4D4">(</span><span style="color:#CE9178">""</span><span style="color:#D4D4D4">);</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span></span></code></pre></div><div class="fact"><div class="label">Обратите внимание</div><p>Создаём id один раз при добавлении. randomUUID работает на localhost и HTTPS. trim убирает пробелы по краям.</p></div></div></section>
+
+<section class="slide slide--ink"><div class="inner"><div class="kicker"><span class="pill">Состояние массива</span> Занятие 01</div><h2>Создаём новый массив</h2><div class="grid-2"><article class="card"><h3>Не изменяем старый</h3><p>tasks.push(newTask) меняет существующий массив. Не мутируйте состояние напрямую.</p></article><article class="card"><h3>Возвращаем новый</h3><p>setTasks(prev =&gt; [...prev, newTask]) копирует прежние элементы и добавляет задачу.</p></article></div><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#6A9955">// prev — предыдущее состояние из очереди обновлений</span></span>
+<span class="line"><span style="color:#DCDCAA">setTasks</span><span style="color:#D4D4D4">(</span><span style="color:#9CDCFE">prev</span><span style="color:#569CD6"> =></span><span style="color:#D4D4D4"> [...</span><span style="color:#9CDCFE">prev</span><span style="color:#D4D4D4">, </span><span style="color:#9CDCFE">newTask</span><span style="color:#D4D4D4">]);</span></span></code></pre></div><div class="fact"><div class="label">Обратите внимание</div><p>Когда новое состояние зависит от предыдущего, удобно передать setter-функции обновляющую функцию.</p></div></div></section>
+
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Практика · 04</span> Занятие 01</div><h2>Отправляем форму</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#808080">&#x3C;</span><span style="color:#569CD6">form</span><span style="color:#9CDCFE"> onSubmit</span><span style="color:#D4D4D4">=</span><span style="color:#569CD6">{</span><span style="color:#9CDCFE">event</span><span style="color:#569CD6"> =></span><span style="color:#D4D4D4"> {</span></span>
+<span class="line"><span style="color:#9CDCFE">  event</span><span style="color:#D4D4D4">.</span><span style="color:#DCDCAA">preventDefault</span><span style="color:#D4D4D4">();</span></span>
+<span class="line"><span style="color:#DCDCAA">  addTask</span><span style="color:#D4D4D4">();</span></span>
+<span class="line"><span style="color:#D4D4D4">}</span><span style="color:#569CD6">}</span><span style="color:#808080">></span></span>
+<span class="line"><span style="color:#808080">  &#x3C;</span><span style="color:#569CD6">label</span><span style="color:#9CDCFE"> htmlFor</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">"task-title"</span><span style="color:#808080">></span><span style="color:#D4D4D4">Новая задача</span><span style="color:#808080">&#x3C;/</span><span style="color:#569CD6">label</span><span style="color:#808080">></span></span>
+<span class="line"><span style="color:#808080">  &#x3C;</span><span style="color:#569CD6">input</span><span style="color:#9CDCFE"> id</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">"task-title"</span><span style="color:#9CDCFE"> value</span><span style="color:#D4D4D4">=</span><span style="color:#569CD6">{</span><span style="color:#9CDCFE">title</span><span style="color:#569CD6">}</span></span>
+<span class="line"><span style="color:#9CDCFE">    onChange</span><span style="color:#D4D4D4">=</span><span style="color:#569CD6">{</span><span style="color:#9CDCFE">event</span><span style="color:#569CD6"> =></span><span style="color:#DCDCAA"> setTitle</span><span style="color:#D4D4D4">(</span><span style="color:#9CDCFE">event</span><span style="color:#D4D4D4">.</span><span style="color:#9CDCFE">target</span><span style="color:#D4D4D4">.</span><span style="color:#9CDCFE">value</span><span style="color:#D4D4D4">)</span><span style="color:#569CD6">}</span><span style="color:#808080"> /></span></span>
+<span class="line"><span style="color:#808080">  &#x3C;</span><span style="color:#569CD6">button</span><span style="color:#9CDCFE"> type</span><span style="color:#D4D4D4">=</span><span style="color:#CE9178">"submit"</span><span style="color:#808080">></span><span style="color:#D4D4D4">Добавить</span><span style="color:#808080">&#x3C;/</span><span style="color:#569CD6">button</span><span style="color:#808080">></span></span>
+<span class="line"><span style="color:#808080">&#x3C;/</span><span style="color:#569CD6">form</span><span style="color:#808080">></span></span></code></pre></div><div class="fact"><div class="label">Обратите внимание</div><p>preventDefault отменяет стандартную отправку с перезагрузкой страницы. Форму можно отправить кнопкой или Enter в поле.</p></div></div></section>
+
+<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">Практика · 05</span> Занятие 01</div><h2>Показываем список и пустое состояние</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#D4D4D4">{</span><span style="color:#9CDCFE">tasks</span><span style="color:#D4D4D4">.</span><span style="color:#9CDCFE">length</span><span style="color:#D4D4D4"> === </span><span style="color:#B5CEA8">0</span><span style="color:#D4D4D4"> ? (</span></span>
+<span class="line"><span style="color:#808080">  &#x3C;</span><span style="color:#569CD6">p</span><span style="color:#808080">></span><span style="color:#D4D4D4">Пока нет задач. Добавьте первую!</span><span style="color:#808080">&#x3C;/</span><span style="color:#569CD6">p</span><span style="color:#808080">></span></span>
+<span class="line"><span style="color:#D4D4D4">) : (</span></span>
+<span class="line"><span style="color:#808080">  &#x3C;</span><span style="color:#569CD6">ul</span><span style="color:#808080">></span></span>
+<span class="line"><span style="color:#569CD6">    {</span><span style="color:#9CDCFE">tasks</span><span style="color:#D4D4D4">.</span><span style="color:#DCDCAA">map</span><span style="color:#D4D4D4">(</span><span style="color:#9CDCFE">task</span><span style="color:#569CD6"> =></span><span style="color:#D4D4D4"> (</span></span>
+<span class="line"><span style="color:#808080">      &#x3C;</span><span style="color:#4EC9B0">TaskItem</span><span style="color:#9CDCFE"> key</span><span style="color:#D4D4D4">=</span><span style="color:#569CD6">{</span><span style="color:#9CDCFE">task</span><span style="color:#D4D4D4">.</span><span style="color:#9CDCFE">id</span><span style="color:#569CD6">}</span><span style="color:#9CDCFE"> title</span><span style="color:#D4D4D4">=</span><span style="color:#569CD6">{</span><span style="color:#9CDCFE">task</span><span style="color:#D4D4D4">.</span><span style="color:#9CDCFE">title</span><span style="color:#569CD6">}</span><span style="color:#808080"> /></span></span>
+<span class="line"><span style="color:#D4D4D4">    ))</span><span style="color:#569CD6">}</span></span>
+<span class="line"><span style="color:#808080">  &#x3C;/</span><span style="color:#569CD6">ul</span><span style="color:#808080">></span></span>
+<span class="line"><span style="color:#D4D4D4">)}</span></span></code></pre></div><div class="fact"><div class="label">Обратите внимание</div><p>Тернарный оператор выбирает один из двух вариантов JSX. Здесь tasks — состояние App, а TaskItem — компонент из примера с props.</p></div></div></section>
+
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Проверка практики</span> Занятие 01</div><h2>Работает ли наш сценарий?</h2><ul class="dots"><li>При пустом списке видна подсказка.</li><li>Задача добавляется и кнопкой, и клавишей Enter.</li><li>Строка из пробелов не добавляется; после успеха поле очищается.</li><li>Несколько задач отображаются в порядке добавления; в консоли нет ошибок key.</li><li>После перезагрузки список пуст: сохранение данных ещё не реализовано.</li></ul><div class="fact"><div class="label">Полный пример</div><p><a href="./task-tracker/App.tsx" download>Скачать App.tsx</a> — замените им src/App.tsx в созданном Vite-проекте. Затем проверьте <code>npm run build</code>.</p></div></div></section>
+
+<section class="slide slide--teal"><div class="inner"><div class="kicker"><span class="pill">Домашняя работа</span> Занятие 01</div><h2>Расширяем Task Tracker</h2><div class="grid-3"><article class="card"><h3>Удаление</h3><p>Добавьте кнопку удаления у каждой задачи. Удаляйте по id, а не по тексту.</p></article><article class="card"><h3>Выполнение</h3><p>Добавьте checkbox: задачу можно выполнить и вернуть в работу. Отличайте выполненные визуально.</p></article><article class="card"><h3>Статистика</h3><p>Покажите количество выполненных и невыполненных задач. Числа должны обновляться при каждом действии.</p></article></div><ul class="dots"><li>Проверьте удаление одной из двух задач с одинаковым текстом и удаление последней задачи.</li><li>Сдайте исходники проекта и краткую инструкцию запуска; node_modules прикладывать не нужно.</li></ul></div></section>
+
+<section class="slide slide--paper"><div class="inner"><div class="kicker"><span class="pill">Подсказки к ДЗ</span> Занятие 01</div><h2>Обновляем данные без мутаций</h2><div class="code-frame"><pre class="code" data-language="tsx"><code><span class="line"><span style="color:#6A9955">// Удалить по id:</span></span>
+<span class="line"><span style="color:#DCDCAA">setTasks</span><span style="color:#D4D4D4">(</span><span style="color:#9CDCFE">prev</span><span style="color:#569CD6"> =></span><span style="color:#9CDCFE"> prev</span><span style="color:#D4D4D4">.</span><span style="color:#DCDCAA">filter</span><span style="color:#D4D4D4">(</span><span style="color:#9CDCFE">task</span><span style="color:#569CD6"> =></span><span style="color:#9CDCFE"> task</span><span style="color:#D4D4D4">.</span><span style="color:#9CDCFE">id</span><span style="color:#D4D4D4"> !== </span><span style="color:#9CDCFE">id</span><span style="color:#D4D4D4">));</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">// Переключить выполнение:</span></span>
+<span class="line"><span style="color:#DCDCAA">setTasks</span><span style="color:#D4D4D4">(</span><span style="color:#9CDCFE">prev</span><span style="color:#569CD6"> =></span><span style="color:#9CDCFE"> prev</span><span style="color:#D4D4D4">.</span><span style="color:#DCDCAA">map</span><span style="color:#D4D4D4">(</span><span style="color:#9CDCFE">task</span><span style="color:#569CD6"> =></span></span>
+<span class="line"><span style="color:#9CDCFE">  task</span><span style="color:#D4D4D4">.</span><span style="color:#9CDCFE">id</span><span style="color:#D4D4D4"> === </span><span style="color:#9CDCFE">id</span><span style="color:#D4D4D4"> ? { ...</span><span style="color:#9CDCFE">task</span><span style="color:#D4D4D4">, </span><span style="color:#9CDCFE">done:</span><span style="color:#D4D4D4"> !</span><span style="color:#9CDCFE">task</span><span style="color:#D4D4D4">.</span><span style="color:#9CDCFE">done</span><span style="color:#D4D4D4"> } : </span><span style="color:#9CDCFE">task</span></span>
+<span class="line"><span style="color:#D4D4D4">));</span></span>
+<span class="line"></span>
+<span class="line"><span style="color:#6A9955">// Вычислить внутри App перед return:</span></span>
+<span class="line"><span style="color:#569CD6">const</span><span style="color:#4FC1FF"> completed</span><span style="color:#D4D4D4"> = </span><span style="color:#9CDCFE">tasks</span><span style="color:#D4D4D4">.</span><span style="color:#DCDCAA">filter</span><span style="color:#D4D4D4">(</span><span style="color:#9CDCFE">task</span><span style="color:#569CD6"> =></span><span style="color:#9CDCFE"> task</span><span style="color:#D4D4D4">.</span><span style="color:#9CDCFE">done</span><span style="color:#D4D4D4">).</span><span style="color:#9CDCFE">length</span><span style="color:#D4D4D4">;</span></span>
+<span class="line"><span style="color:#569CD6">const</span><span style="color:#4FC1FF"> remaining</span><span style="color:#D4D4D4"> = </span><span style="color:#9CDCFE">tasks</span><span style="color:#D4D4D4">.</span><span style="color:#9CDCFE">length</span><span style="color:#D4D4D4"> - </span><span style="color:#9CDCFE">completed</span><span style="color:#D4D4D4">;</span></span></code></pre></div><div class="fact"><div class="label">Обратите внимание</div><p>id передайте в обработчик выбранной задачи. Счётчики вычисляйте из tasks при рендере: отдельное состояние для них не нужно.</p></div></div></section>
+
+<section class="slide slide--ink"><div class="inner"><div class="kicker"><span class="pill">Итоги</span> Занятие 01</div><h2>Что вы теперь умеете</h2><ul class="dots"><li>Создать и запустить React + TypeScript проект с Vite.</li><li>Разбить интерфейс на функциональные компоненты и передать props.</li><li>Использовать JSX для текста, списков и условного отображения.</li><li>Обработать действие пользователя и обновить интерфейс через useState.</li><li>Собрать базовую версию собственного Task Tracker.</li></ul></div></section>
+
+<section class="slide slide--warm"><div class="inner"><div class="kicker"><span class="pill">Материалы</span> Занятие 01</div><h2>Продолжить самостоятельно</h2><ul class="dots"><li><a href="https://ru.react.dev/learn">React · учебник</a> — компоненты, props и состояние.</li><li><a href="https://ru.react.dev/learn/writing-markup-with-jsx">React · JSX</a> — правила разметки.</li><li><a href="https://ru.react.dev/learn/updating-arrays-in-state">React · массивы в состоянии</a> — добавление, удаление и замена.</li><li><a href="https://vite-docs.ru/guide/">Vite · начало работы</a> — создание проекта и требования.</li><li><a href="./task-tracker/App.tsx" download>Полный код практики · App.tsx</a></li></ul></div></section>
+  </main>
+  <script>
+    const slides = [...document.querySelectorAll(".slide")];
+    const bar = document.getElementById("bar");
+    const counter = document.getElementById("counter");
+    const total = slides.length;
+    let i = 0;
+
+    function pad(n) { return String(n).padStart(2, "0"); }
+
+    function go(n) {
+      i = Math.max(0, Math.min(total - 1, n));
+      slides.forEach((s, k) => (s.classList.toggle("is-on", k === i), s.setAttribute("aria-hidden", String(k !== i))));
+      bar.style.width = ((i + 1) / total * 100) + "%";
+      counter.textContent = pad(i + 1) + " / " + pad(total);
+      history.replaceState(null, "", "#" + (i + 1));
+    }
+
+    function fromHash() {
+      const n = parseInt(location.hash.replace("#", ""), 10);
+      if (Number.isFinite(n)) go(n - 1);
+      else go(0);
+    }
+
+    document.querySelector(".nav-hit--prev").addEventListener("click", () => go(i - 1));
+    document.querySelector(".nav-hit--next").addEventListener("click", () => go(i + 1));
+
+    document.addEventListener("keydown", (e) => {
+      if (e.target.closest("input, textarea, select, button, a, [contenteditable]")) return;
+      if (["ArrowRight", "ArrowDown", "PageDown", " ", "Enter"].includes(e.key)) {
+        e.preventDefault();
+        go(i + 1);
+      } else if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace"].includes(e.key)) {
+        e.preventDefault();
+        go(i - 1);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        go(0);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        go(total - 1);
+      } else if (e.key === "f" || e.key === "F") {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+      }
+    });
+
+    let touchX = null;
+    let touchY = null;
+    document.addEventListener("touchstart", (e) => { if (e.target.closest(".code-frame, a, button")) { touchX = null; return; } touchX = e.changedTouches[0].screenX; touchY = e.changedTouches[0].screenY; }, { passive: true });
+    document.addEventListener("touchend", (e) => {
+      if (touchX == null) return;
+      const dx = e.changedTouches[0].screenX - touchX;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(e.changedTouches[0].screenY - touchY)) go(dx < 0 ? i + 1 : i - 1);
+      touchX = null;
+    }, { passive: true });
+
+    window.addEventListener("hashchange", fromHash);
+    fromHash();
+  </script>
+
+<script id="code-tools">
+(() => {
+  const status = document.createElement('div');
+  status.className = 'copy-announcement';
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
+  document.body.append(status);
+  const icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>';
+  function fallback(text) {
+    const active = document.activeElement;
+    const field = document.createElement('textarea');
+    field.value = text;
+    field.setAttribute('aria-label', 'Код для копирования');
+    field.style.cssText = 'position:fixed;left:0;top:0;opacity:0;pointer-events:none';
+    document.body.append(field);
+    field.focus(); field.select();
+    let copied = false;
+    try { copied = document.execCommand('copy'); } catch {}
+    field.remove();
+    active?.focus({ preventScroll: true });
+    return copied;
+  }
+  document.querySelectorAll('.code-frame').forEach(frame => {
+    const code = frame.querySelector('pre.code code');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'code-copy';
+    button.title = 'Скопировать код';
+    button.setAttribute('aria-label', 'Скопировать код');
+    button.innerHTML = icon + '<span class="code-copy-label"></span>';
+    const label = button.querySelector('span');
+    let reset;
+    button.addEventListener('click', async event => {
+      event.stopPropagation();
+      clearTimeout(reset);
+      let copied = false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(code.textContent);
+          copied = true;
+        }
+      } catch {}
+      if (!copied) copied = fallback(code.textContent);
+      const message = copied ? 'Скопировано' : 'Выделено: Ctrl/Cmd+C';
+      if (!copied) {
+        const range = document.createRange();
+        range.selectNodeContents(code);
+        const selection = window.getSelection();
+        selection.removeAllRanges(); selection.addRange(range);
+      }
+      label.textContent = message;
+      button.dataset.state = copied ? 'success' : 'error';
+      button.setAttribute('aria-label', message);
+      status.textContent = '';
+      requestAnimationFrame(() => { status.textContent = message; });
+      reset = setTimeout(() => {
+        label.textContent = '';
+        delete button.dataset.state;
+        button.setAttribute('aria-label', 'Скопировать код');
+      }, 2400);
+    });
+    frame.append(button);
+  });
+})();
+</script>
+</body>
+</html>
