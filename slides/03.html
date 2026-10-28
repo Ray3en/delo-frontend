@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Занятие 03. Сборка и развертывание React-приложений — ДЕЛО</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=Unbounded:wght@500;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0c1624;
+      --ink-soft: #1a2a3a;
+      --paper: #f3f0e8;
+      --paper-warm: #ebe6da;
+      --accent: #e85d04;
+      --accent-deep: #c44902;
+      --accent-glow: #ffb068;
+      --teal: #0d6e6e;
+      --muted: #5c6b7a;
+      --line: rgba(12, 22, 36, 0.12);
+      --font-display: "Unbounded", sans-serif;
+      --font-body: "Onest", sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; }
+    body {
+      font-family: var(--font-body);
+      color: var(--ink);
+      background: #0b1016;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .deck {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: clamp(4.25rem, 9vh, 5.5rem) clamp(1.5rem, 5vw, 4.5rem) clamp(3.5rem, 8vh, 4.75rem);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(10px);
+      transition: opacity 0.35s ease, transform 0.35s ease, visibility 0.35s;
+      overflow: hidden;
+    }
+    .slide.is-on {
+      opacity: 1;
+      visibility: visible;
+      transform: none;
+      z-index: 1;
+    }
+
+    .slide--dark { background: #111820; color: var(--paper); }
+    .slide--ink { background: var(--ink); color: var(--paper); }
+    .slide--paper { background: var(--paper); color: var(--ink); }
+    .slide--warm { background: linear-gradient(180deg, var(--paper-warm), var(--paper)); color: var(--ink); }
+    .slide--teal { background: linear-gradient(135deg, #0d3d3d 0%, #0c1624 55%, #1a2433 100%); color: var(--paper); }
+
+    .inner {
+      width: min(1120px, 100%);
+      margin-inline: auto;
+    }
+    .inner--wide { width: min(1240px, 100%); }
+
+    .chrome {
+      position: fixed;
+      z-index: 10;
+      left: 0; right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1.05rem clamp(1.5rem, 5vw, 4.5rem);
+      pointer-events: none;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .chrome--top { top: 0; color: var(--ink); }
+    .chrome--bottom { bottom: 0; padding-bottom: 1.15rem; color: var(--muted); }
+    .brand { font-family: var(--font-display); font-weight: 700; letter-spacing: 0.06em; }
+    .brand .x { color: var(--accent); }
+    .hint { font-weight: 500; letter-spacing: 0.04em; text-transform: none; }
+    body:has(.slide--dark.is-on) .chrome--top,
+    body:has(.slide--ink.is-on) .chrome--top,
+    body:has(.slide--teal.is-on) .chrome--top { color: var(--paper); }
+    body:has(.slide--dark.is-on) .chrome--bottom,
+    body:has(.slide--ink.is-on) .chrome--bottom,
+    body:has(.slide--teal.is-on) .chrome--bottom { color: rgba(243, 240, 232, 0.5); }
+
+    .progress {
+      position: fixed;
+      z-index: 11;
+      left: 0; right: 0; bottom: 0;
+      height: 3px;
+      background: rgba(12, 22, 36, 0.18);
+    }
+    .progress > i {
+      display: block;
+      height: 100%;
+      width: 0;
+      background: var(--accent);
+      transition: width 0.3s ease;
+    }
+
+    .kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.55rem;
+      margin-bottom: 1rem;
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .pill {
+      color: var(--accent-deep);
+      background: rgba(232, 93, 4, 0.12);
+      padding: 0.28rem 0.6rem;
+      border-radius: 999px;
+    }
+    .slide--dark .kicker,
+    .slide--ink .kicker,
+    .slide--teal .kicker { color: rgba(243, 240, 232, 0.5); }
+    .slide--dark .pill,
+    .slide--ink .pill,
+    .slide--teal .pill {
+      color: var(--accent-glow);
+      background: rgba(232, 93, 4, 0.18);
+    }
+
+    .eyebrow {
+      font-family: var(--font-display);
+      font-size: clamp(1.15rem, 2.6vw, 1.7rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.65rem;
+    }
+    h1, h2 {
+      font-family: var(--font-display);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.08;
+    }
+    h1 {
+      font-size: clamp(2.4rem, 7vw, 4.8rem);
+      text-transform: uppercase;
+      max-width: 14ch;
+      margin-bottom: 1.1rem;
+    }
+    h2 {
+      font-size: clamp(1.7rem, 4.2vw, 2.85rem);
+      max-width: 22ch;
+      margin-bottom: 0.85rem;
+    }
+    .lead {
+      font-size: clamp(1.05rem, 2vw, 1.28rem);
+      line-height: 1.45;
+      max-width: 38ch;
+      color: var(--muted);
+    }
+    .slide--dark .lead,
+    .slide--ink .lead,
+    .slide--teal .lead { color: rgba(243, 240, 232, 0.68); }
+
+    .agenda {
+      list-style: none;
+      display: grid;
+      gap: 0;
+    }
+    .agenda li {
+      display: grid;
+      grid-template-columns: 3.4rem 1fr;
+      gap: 1.15rem;
+      padding: 0.72rem 0;
+      border-bottom: 1px solid var(--line);
+      align-items: baseline;
+    }
+    .agenda .n {
+      font-family: var(--font-display);
+      font-weight: 700;
+      color: var(--accent);
+      font-size: 1.05rem;
+    }
+    .agenda .t {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(1.05rem, 2vw, 1.35rem);
+      letter-spacing: -0.02em;
+    }
+    .agenda .d {
+      display: block;
+      margin-top: 0.25rem;
+      color: var(--muted);
+      font-size: 0.98rem;
+      font-weight: 400;
+    }
+
+    .grid-2, .grid-3, .grid-4 {
+      display: grid;
+      gap: clamp(1rem, 2.5vw, 1.6rem);
+      margin-top: 1.75rem;
+    }
+    .grid-2 { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .card {
+      padding: clamp(1.15rem, 2.2vw, 1.6rem);
+      border: 1px solid rgba(12, 22, 36, 0.08);
+      background: rgba(255, 255, 255, 0.55);
+      border-radius: 1.35rem;
+      box-shadow: 0 12px 32px rgba(12, 22, 36, 0.06);
+    }
+    .slide--dark .card,
+    .slide--ink .card,
+    .slide--teal .card {
+      background: rgba(243, 240, 232, 0.06);
+      border-color: rgba(243, 240, 232, 0.12);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
+    }
+    .card h3 {
+      font-family: var(--font-display);
+      font-size: clamp(1rem, 1.6vw, 1.18rem);
+      font-weight: 700;
+      margin-bottom: 0.45rem;
+      letter-spacing: -0.02em;
+    }
+    .slide--dark .card h3 { color: var(--accent-glow); }
+    .card p { color: var(--muted); font-size: 0.98rem; line-height: 1.45; }
+    .slide--dark .card p,
+    .slide--ink .card p,
+    .slide--teal .card p { color: rgba(243, 240, 232, 0.68); }
+
+    .path {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.45rem 0.35rem;
+      margin-top: 1.75rem;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+    }
+    .path span {
+      padding: 0.45rem 0.7rem;
+      border: 1px solid rgba(243, 240, 232, 0.16);
+      color: rgba(243, 240, 232, 0.55);
+    }
+    .path .now {
+      color: #fff;
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .path .sep { border: 0; padding: 0 0.15rem; color: var(--accent); }
+
+    .code {
+      --win-bar: 1.85rem;
+      position: relative;
+      margin-top: 1.5rem;
+      padding: calc(var(--win-bar) + 0.95rem) 1.35rem 1.1rem;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: clamp(0.92rem, 1.4vw, 1.08rem);
+      line-height: 1.55;
+      color: #e8e4da;
+      overflow: auto;
+      border-radius: 14px;
+      background: #1c1c1e;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      box-shadow:
+        0 1px 0 rgba(255, 255, 255, 0.08) inset,
+        0 18px 44px rgba(12, 22, 36, 0.28);
+    }
+    .code::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: var(--win-bar);
+      border-radius: 14px 14px 0 0;
+      background: linear-gradient(180deg, #3a3a3c, #2c2c2e);
+      box-shadow: inset 0 -1px 0 rgba(0, 0, 0, 0.35);
+    }
+    .code::after {
+      content: "";
+      position: absolute;
+      top: calc((var(--win-bar) - 10px) / 2);
+      left: 0.85rem;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ff5f57;
+      box-shadow:
+        16px 0 0 #febc2e,
+        32px 0 0 #28c840;
+    }
+    .code--sm {
+      --win-bar: 1.55rem;
+      margin-top: 0.85rem;
+      padding: calc(var(--win-bar) + 0.7rem) 0.95rem 0.8rem;
+      font-size: clamp(0.78rem, 1.15vw, 0.9rem);
+      line-height: 1.45;
+      border-radius: 12px;
+    }
+    .code--sm::before { border-radius: 12px 12px 0 0; }
+    .code--sm::after {
+      width: 8px;
+      height: 8px;
+      top: calc((var(--win-bar) - 8px) / 2);
+      left: 0.75rem;
+      box-shadow:
+        13px 0 0 #febc2e,
+        26px 0 0 #28c840;
+    }
+    .card .code { margin-bottom: 0; }
+    .fact {
+      margin-top: 1.15rem;
+      padding: 0.95rem 1.15rem;
+      border-left: 3px solid var(--accent);
+      background: rgba(232, 93, 4, 0.08);
+      border-radius: 0 1rem 1rem 0;
+    }
+    .fact .label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-deep);
+      margin-bottom: 0.35rem;
+    }
+    .fact p {
+      font-size: 1.02rem;
+      line-height: 1.4;
+      color: var(--ink-soft);
+      max-width: 54ch;
+    }
+    .grid-2--tight {
+      margin-top: 1.15rem;
+      gap: 0.9rem;
+    }
+    .sig {
+      display: grid;
+      grid-template-columns: auto 1fr 1fr;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+    }
+    .sig-part {
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      padding: 0.75rem 0.9rem 0.85rem;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.28);
+      min-width: 0;
+      border-radius: 1rem;
+    }
+    .sig-part--in { border-color: rgba(13, 110, 110, 0.35); }
+    .sig-part--out { border-color: rgba(232, 93, 4, 0.35); }
+    .sig-label {
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .sig-part--in .sig-label { color: var(--teal); }
+    .sig-part--out .sig-label { color: var(--accent-deep); }
+    .sig-code {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: clamp(0.95rem, 1.6vw, 1.15rem);
+      font-weight: 600;
+      color: var(--ink);
+      line-height: 1.3;
+    }
+    .kw { color: #ff9f5a; }
+    .fn { color: #7ecfcf; }
+    .st { color: #c9e39b; }
+    .cm { color: rgba(243, 240, 232, 0.38); }
+    .tp { color: #9ec5ff; }
+    .num { color: #e8c27a; }
+    .card code, .lead code, p code, h3 code {
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 0.92em;
+      color: var(--accent-deep);
+    }
+    .slide--dark .card code,
+    .slide--ink .card code,
+    .slide--teal .card code,
+    .slide--dark .lead code,
+    .slide--ink .lead code,
+    .slide--teal .lead code { color: var(--accent-glow); }
+
+    .dots {
+      list-style: none;
+      display: grid;
+      gap: 0.85rem;
+      margin-top: 1.25rem;
+      max-width: 46rem;
+    }
+    .dots li {
+      position: relative;
+      padding-left: 1.2rem;
+      font-size: 1.12rem;
+      line-height: 1.45;
+      color: var(--ink-soft);
+    }
+    .dots li::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 0.58em;
+      width: 0.45rem; height: 0.45rem;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+    .slide--dark .dots li,
+    .slide--ink .dots li,
+    .slide--teal .dots li { color: rgba(243, 240, 232, 0.78); }
+
+    .practice {
+      margin-top: 1.75rem;
+      padding: 1.35rem 1.5rem;
+      border: 1px solid rgba(243, 240, 232, 0.16);
+      background: rgba(232, 93, 4, 0.12);
+      border-radius: 1.15rem;
+    }
+    .practice .label {
+      font-size: 0.75rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent-glow);
+      margin-bottom: 0.45rem;
+    }
+    .practice p { font-size: 1.12rem; line-height: 1.4; max-width: 42ch; }
+
+    .nav-hit {
+      position: fixed;
+      top: 0; bottom: 3px;
+      width: 18%;
+      z-index: 8;
+      background: transparent;
+      border: 0;
+      cursor: pointer;
+    }
+    .nav-hit--prev { left: 0; }
+    .nav-hit--next { right: 0; }
+
+    @media (max-width: 860px) {
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .agenda li { grid-template-columns: 2.4rem 1fr; }
+      .chrome .hint { display: none; }
+      h1 { max-width: none; }
+    }
+
+    .slide { overflow-y: auto; }
+    .inner { flex-shrink: 0; }
+    .code { white-space: pre; tab-size: 2; }
+    .grid-2 > *, .grid-3 > * { min-width: 0; }
+    a { color: var(--accent-deep); text-underline-offset: 4px; }
+    .slide--ink a, .slide--dark a { color: var(--accent-glow); }
+    .nav-hit { top: auto; bottom: 0.55rem; width: 3rem; height: 2.6rem; z-index: 12; color: var(--accent); font-size: 1.5rem; border-radius: 0.5rem; }
+    .nav-hit--prev { left: calc(50% - 3.5rem); }
+    .nav-hit--next { right: calc(50% - 3.5rem); }
+    .nav-hit:focus-visible { outline: 2px solid var(--accent); }
+    @media (max-width: 860px), (max-height: 650px) {
+      .slide { justify-content: flex-start; }
+      .grid-2, .grid-3, .grid-4 { gap: 0.8rem; margin-top: 1rem; }
+    }
+    @media (prefers-reduced-motion: reduce) { .slide, .progress > i { transition: none; } }
+    @media print {
+      html, body { height: auto; overflow: visible; background: white; }
+      .chrome, .progress, .nav-hit { display: none; }
+      .deck { height: auto; }
+      .slide { position: relative; opacity: 1; visibility: visible; transform: none; min-height: 100vh; break-after: page; overflow: visible; print-color-adjust: exact; }
+    }
+
+    .code { font-size: clamp(0.85rem, 1.25vw, 1rem); line-height: 1.45; }
+    .code--sm { font-size: clamp(0.78rem, 1.1vw, 0.9rem); }
+    .hook-table { width: 100%; border-collapse: collapse; margin-top: 1.4rem; font-size: 1.03rem; line-height: 1.4; }
+    .hook-table th, .hook-table td { text-align: left; padding: 0.75rem 0.9rem; border-bottom: 1px solid var(--line); }
+    .hook-table th { color: var(--accent-deep); }
+    .hook-table td:first-child { white-space: nowrap; font-weight: 600; }
+    .table-wrap { overflow-x: auto; }
+    .slide--ink .fact p, .slide--dark .fact p { color: var(--paper); }
+    .slide--ink .fact .label, .slide--dark .fact .label { color: var(--accent-glow); }
+  
+/* code-tools:start */
+.code-frame { position: relative; margin-top: 1.5rem; min-width: 0; }
+.code-frame .code { margin-top: 0; color: #d4d4d4; background: #1e1e1e; }
+.code-frame .code code { color: #d4d4d4; font: inherit; }
+.code-copy { position: absolute; z-index: 3; top: 2px; right: 8px; height: 26px; min-width: 30px; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 2px 7px; border: 1px solid transparent; border-radius: 5px; background: #303033; color: #d4d4d4; cursor: pointer; font: 11px/1.2 var(--font-body); }
+.code-copy:hover { background: #454549; color: white; border-color: #707074; }
+.code-copy:focus-visible { outline: 2px solid #ffb068; outline-offset: 2px; }
+.code-copy svg { width: 15px; height: 15px; flex-shrink: 0; }
+.code-copy[data-state="success"] { color: #b5cea8; }
+.code-copy[data-state="error"] { color: #ffb068; }
+.code-copy-label:empty { display: none; }
+.copy-announcement { position: fixed; width: 1px; height: 1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+@media (pointer: coarse) { .code-copy { min-width: 44px; } }
+@media print { .code-copy, .copy-announcement { display: none; } }
+/* code-tools:end */
+
+
+/* dark-callouts:start */
+:is(.slide--dark, .slide--ink, .slide--teal) .fact {
+  color: #f3f0e8;
+  background: #243044;
+  border: 1px solid #536079;
+  border-left: 4px solid #ffb068;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.16);
+}
+:is(.slide--dark, .slide--ink, .slide--teal) .fact p,
+:is(.slide--dark, .slide--ink, .slide--teal) .fact li {
+  color: #f3f0e8;
+}
+:is(.slide--dark, .slide--ink, .slide--teal) .fact .label {
+  color: #ffb068;
+}
+:is(.slide--dark, .slide--ink, .slide--teal) .fact a {
+  color: #a8daff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+:is(.slide--dark, .slide--ink, .slide--teal) .fact code {
+  color: #ffe0ba;
+  background: #192231;
+  padding: 0.08em 0.28em;
+  border-radius: 0.25rem;
+}
+:is(.slide--dark, .slide--ink, .slide--teal) .fact a:hover { color: #ffffff; }
+/* dark-callouts:end */
+
+.explain { font-size: 1.12rem; line-height: 1.5; margin-top: 1rem; max-width: 92ch; }
+.slide--ink .explain { color: rgba(243,240,232,.85); }
+.slide .fact p { max-width: none; }
+.slide--ink .agenda .d { color: rgba(243,240,232,.7); }
+@media (min-width: 861px) and (min-height: 651px) { .slide { padding-top: 4rem; padding-bottom: 4rem; } .dots { gap: .65rem; max-width: 70rem; } .grid-2 { margin-top: 1.1rem; } }
+</style>
+</head>
+<body>
+  <div class="chrome chrome--top">
+    <div class="brand">Дело <span class="x">·</span> Frontend</div>
+    <div class="meta">Занятие 03</div>
+  </div>
+  <div class="chrome chrome--bottom">
+    <div class="hint">← → или пробел</div>
+    <div class="counter" id="counter">01 / 20</div>
+  </div>
+  <div class="progress" aria-hidden="true"><i id="bar"></i></div>
+
+  <button class="nav-hit nav-hit--prev" type="button" aria-label="Предыдущий слайд">←</button>
+  <button class="nav-hit nav-hit--next" type="button" aria-label="Следующий слайд">→</button>
+
+  <main class="deck" id="deck">
+<section class="slide slide--ink is-on"><div class="inner inner--wide"><div class="kicker"><span class="pill">Frontend · React</span> Занятие 03</div><h2>Окружение и публикация React-приложения</h2><p class="explain">Разбираемся, откуда приложение берёт настройки, как собрать его для пользователей и где разместить готовый сайт.</p><ul class="dots"><li>.env и окружения проекта</li><li>Docker и контейнеры</li><li>nginx и раздача файлов</li><li>GitHub Pages</li><li>Vercel</li></ul></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">Environment</span> Занятие 03</div><h2>Окружение и программное обеспечение</h2><p class="explain"><strong>Environment (окружение)</strong> — условия, в которых собирается и работает приложение: операционная система, версии ПО, зависимости, переменные и доступные сервисы.</p><div class="grid-2"><article class="card"><h3>ПО для занятия</h3><p>Редактор кода, терминал, Git, Node.js с npm и браузер с DevTools. Docker Desktop понадобится для контейнеров.</p></article><article class="card"><h3>Сервисы для публикации</h3><p>Аккаунты GitHub и Vercel. nginx запустим внутри контейнера, отдельно устанавливать его на компьютер не нужно.</p></article></div><div class="fact"><div class="label">Важно</div><p>Версии Node.js и зависимостей должны подходить проекту. Проверяем node --version, npm --version, git --version и docker --version.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">Environment</span> Занятие 03</div><h2>Development, staging и production</h2><div class="grid-2"><article class="card"><h3>Development · разработка</h3><p>Работа на компьютере разработчика. Vite запускает dev-сервер, обновляет страницу при изменении кода и помогает искать ошибки.</p></article><article class="card"><h3>Production · пользователи</h3><p>Готовая оптимизированная сборка на хостинге. Она обращается к рабочему API и должна открываться по публичному адресу.</p></article></div><p class="explain"><strong>Staging</strong> — отдельное окружение для проверки перед публикацией. Оно может использовать тестовый API и свою базу данных.</p><div class="fact"><div class="label">Важно</div><p>Один исходный код может работать с разными адресами API. Настройки окружения позволяют менять адрес без правки компонентов.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">01 · env</span> Занятие 03</div><h2>Настройки проекта в .env</h2><p class="explain"><code>.env</code> — текстовый файл с настройками проекта. Храним в нём, например, адрес API, чтобы не прописывать его в компонентах. Файл лежит в корне проекта рядом с package.json.</p><div class="code-frame"><pre class="code code--sm" data-language="env"><code># .env
+VITE_API_URL=https://api.example.com
+VITE_ENABLE_STATS=false</code></pre></div><div class="code-frame"><pre class="code code--sm" data-language="js"><code>const apiUrl = import.meta.env.VITE_API_URL;
+const statsEnabled = import.meta.env.VITE_ENABLE_STATS === &quot;true&quot;;</code></pre></div><div class="fact"><div class="label">Важно</div><p>Vite передаёт в браузер переменные с префиксом VITE_. Значения из файла — строки. Пароли и приватные ключи в VITE_* хранить нельзя: они попадут в клиентский код.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">env · файлы</span> Занятие 03</div><h2>Какие файлы читает Vite</h2><div class="code-frame"><pre class="code code--sm" data-language="env"><code>.env                    # Общие настройки
+.env.local              # Личные настройки для всех режимов
+.env.development        # Для npm run dev
+.env.development.local  # Личные настройки разработки
+.env.production         # Для npm run build
+.env.production.local   # Личные настройки production</code></pre></div><p class="explain">Для production приоритет растёт так: <strong>.env → .env.local → .env.production → .env.production.local</strong>. Уже заданные переменные процесса имеют наивысший приоритет.</p><div class="fact"><div class="label">Важно</div><p>При совпадении ключа побеждает значение с большим приоритетом. Остальные ключи сохраняются. local означает личный файл, а не режим разработки. Файлы *.local добавляем в .gitignore.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">env · пример</span> Занятие 03</div><h2>Разные API для разработки и production</h2><div class="code-frame"><pre class="code code--sm" data-language="env"><code># .env.development
+VITE_API_URL=http://localhost:4000
+
+# .env.production
+VITE_API_URL=https://api.example.com</code></pre></div><p class="explain"><code>npm run dev</code> использует development, <code>npm run build</code> — production. Режим можно выбрать явно: <code>npm run build -- --mode staging</code> загрузит файлы .env.staging и .env.staging.local вместе с общими файлами.</p><div class="fact"><div class="label">Важно</div><p>После изменения .env перезапускаем dev-сервер. Для опубликованного сайта нужна новая сборка: Vite подставляет значения в JavaScript во время build. .env.example хранит шаблон настроек без секретов.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">env · практика</span> Занятие 03</div><h2>Сборка с production-настройками</h2><div class="code-frame"><pre class="code code--sm" data-language="bash"><code>npm ci
+npm run build
+npm run preview</code></pre></div><ul class="dots"><li>npm ci устанавливает зависимости по package-lock.json.</li><li>Vite создаёт dist с HTML, JavaScript, CSS и ресурсами.</li><li>preview позволяет проверить готовую сборку локально. Для постоянного хостинга используем nginx или платформу публикации.</li></ul><div class="fact"><div class="label">Важно</div><p>В клиентском Vite значения подставляются во время сборки. Изменение .env рядом с готовой папкой dist не изменяет сайт.</p></div></div></section>
+<section class="slide slide--ink"><div class="inner inner--wide"><div class="kicker"><span class="pill">02 · Docker</span> Занятие 03</div><h2>Docker Compose: два варианта</h2><p class="explain">Docker запускает приложение в контейнере. Compose описывает его сборку и порты. В обоих вариантах исходники копируются в образ через Dockerfile, без volumes.</p><div class="grid-2"><div><h3>Без nginx · разработка</h3><div class="code-frame"><pre class="code code--sm" data-language="yaml"><code>services:
+  frontend:
+    build: .
+    ports:
+      - &quot;5173:5173&quot;</code></pre></div><div class="code-frame"><pre class="code code--sm" data-language="dockerfile"><code>FROM node:22-alpine
+WORKDIR /app
+COPY . .
+RUN npm ci
+CMD [&quot;npm&quot;, &quot;run&quot;, &quot;dev&quot;, &quot;--&quot;, &quot;--host&quot;, &quot;0.0.0.0&quot;]</code></pre></div></div><div><h3>С nginx · production</h3><div class="code-frame"><pre class="code code--sm" data-language="yaml"><code>services:
+  frontend:
+    build: .
+    ports:
+      - &quot;8080:80&quot;</code></pre></div><p class="explain">Открываем http://localhost:8080. Для этого варианта используем Dockerfile со следующего слайда.</p><p class="explain">Без nginx открываем http://localhost:5173. Vite работает как dev-сервер.</p></div></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">Docker · production</span> Занятие 03</div><h2>Dockerfile: сборка и nginx</h2><div class="grid-2"><div><h3>Этап 1 · сборка</h3><div class="code-frame"><pre class="code code--sm" data-language="dockerfile"><code># Этап 1
+FROM node:22-alpine AS build
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY . .
+RUN npm run build</code></pre></div></div><div><h3>Этап 2 · запуск nginx</h3><div class="code-frame"><pre class="code code--sm" data-language="dockerfile"><code># Этап 2
+FROM nginx:1.27-alpine
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+EXPOSE 80
+CMD [&quot;nginx&quot;, &quot;-g&quot;, &quot;daemon off;&quot;]</code></pre></div></div></div><div class="fact"><div class="label">Два этапа одного Dockerfile</div><p><strong>EXPOSE 80</strong> документирует HTTP-порт контейнера. <strong>CMD ["nginx", "-g", "daemon off;"]</strong> запускает nginx главным процессом. Обе инструкции завершают второй этап Dockerfile в правой колонке.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">Docker · команды</span> Занятие 03</div><h2>Основные команды Compose</h2><div class="code-frame"><pre class="code code--sm" data-language="bash"><code>docker compose up -d          # Запустить в фоне
+docker compose up -d --build  # Собрать образ и запустить
+docker compose ps             # Показать состояние сервисов
+docker compose logs -f        # Смотреть логи в реальном времени
+docker compose down           # Остановить и удалить контейнеры и сеть</code></pre></div><p class="explain"><strong>-d</strong> оставляет контейнеры работать в фоне после завершения команды. <strong>--build</strong> запускает сборку образов перед стартом сервисов, для которых указан build. Docker может использовать кеш неизменившихся слоёв.</p><div class="fact"><div class="label">Важно</div><p>После изменения кода или .env для production повторяем up -d --build: Vite должен заново собрать dist. В варианте без nginx --build также нужен после изменения исходников: они хранятся внутри образа. Флаг -f у logs продолжает вывод новых записей.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">nginx · SPA</span> Занятие 03</div><h2>nginx: веб-сервер для React SPA</h2><p class="explain"><strong>nginx</strong> принимает HTTP-запросы браузера и отдаёт HTML, JavaScript, CSS и изображения из готовой папки dist. Файл <code>nginx.conf</code> лежит рядом с Dockerfile.</p><div class="code-frame"><pre class="code code--sm" data-language="nginx"><code>server {
+  listen 80;
+  server_name _;
+  root /usr/share/nginx/html;
+  index index.html;
+
+  location /assets/ {
+    try_files $uri =404;
+  }
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+}</code></pre></div><p class="explain">root задаёт папку сайта. Для существующих assets nginx отдаёт файл. Для маршрута /tasks/42 возвращает index.html, а React Router выбирает экран.</p><div class="fact"><div class="label">Важно</div><p>Без SPA fallback переход внутри приложения может работать, а обновление /tasks/42 — давать 404. Для отсутствующих assets сохраняем настоящий ответ 404.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">04 · GitHub Pages</span> Занятие 03</div><h2>Статический хостинг GitHub Pages</h2><p class="explain"><strong>GitHub Pages</strong> публикует статические файлы из репозитория. Подходит для учебного React SPA, портфолио и документации.</p><div class="grid-2"><article class="card"><h3>Что размещаем</h3><p>Готовую папку dist: HTML, CSS, JS и изображения. Сборку выполняем локально.</p></article><article class="card"><h3>Где работает логика</h3><p>React выполняется в браузере. Для базы данных и серверных секретов нужен отдельный backend.</p></article></div><div class="fact"><div class="label">Важно</div><p>Для сайта проекта адрес обычно имеет вид https://username.github.io/repository/. Имя репозитория становится частью пути к ресурсам.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">GitHub Pages · Vite</span> Занятие 03</div><h2>Настройка base и маршрутов</h2><div class="code-frame"><pre class="code code--sm" data-language="js"><code>import { defineConfig } from &quot;vite&quot;;
+import react from &quot;@vitejs/plugin-react&quot;;
+
+export default defineConfig({
+  plugins: [react()],
+  base: &quot;/task-tracker/&quot;,
+});</code></pre></div><p class="explain">Если репозиторий называется task-tracker, base указывает на /task-tracker/. Для username.github.io или собственного домена обычно используют /.</p><div class="fact"><div class="label">Важно</div><p>GitHub Pages не предоставляет обычный SPA rewrite на index.html. Для простой практики используем HashRouter: адрес будет /task-tracker/#/tasks. При переходе с BrowserRouter меняем оболочку роутера на HashRouter.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">GitHub Pages · публикация</span> Занятие 03</div><h2>Публикация из ветки gh-pages</h2><div class="code-frame"><pre class="code code--sm" data-language="bash"><code>npm install --save-dev gh-pages
+npm run build
+npx gh-pages -d dist</code></pre></div><ul class="dots"><li>Команду выполняем в Git-репозитории проекта с настроенным origin и доступом на запись. Она отправляет dist в ветку gh-pages.</li><li>В Settings → Pages выбираем Deploy from a branch, ветку gh-pages и папку / (root).</li><li>После публикации открываем адрес сайта, проверяем ресурсы и маршруты. Для обновления повторяем build и gh-pages.</li></ul><div class="fact"><div class="label">Важно</div><p>Значения VITE_* берутся при локальной сборке. При использовании собственного домена проверьте base и настройки домена в Pages.</p></div></div></section>
+<section class="slide slide--ink"><div class="inner inner--wide"><div class="kicker"><span class="pill">05 · Vercel</span> Занятие 03</div><h2>Vercel</h2><p class="explain"><strong>Vercel</strong> — платформа для публикации веб-приложений. Она получает код из репозитория, выполняет сборку и размещает результат по HTTPS-адресу.</p><div class="grid-2"><article class="card"><h3>Для Vite-приложения</h3><p>Платформа устанавливает зависимости, запускает npm run build и публикует папку dist.</p></article><article class="card"><h3>Для команды</h3><p>Изменения в подключённом репозитории могут запускать новые публикации. Для проверки доступны отдельные preview-развёртывания.</p></article></div><div class="fact"><div class="label">Важно</div><p>Docker и nginx для этого способа публикации настраивать не требуется. Используем тот же React-проект, но размещение и раздачу файлов выполняет платформа.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">Vercel · настройка</span> Занятие 03</div><h2>Подключение Vite-проекта</h2><ul class="dots"><li>Создаём проект в Vercel и импортируем нужный GitHub-репозиторий.</li><li>Выбираем корневую папку приложения. Framework Preset: Vite, Build Command: npm run build, Output Directory: dist.</li><li>Добавляем VITE_API_URL в Environment Variables для нужных окружений: Production и Preview.</li><li>Запускаем Deploy и проверяем сайт по выданному адресу.</li></ul><div class="fact"><div class="label">Важно</div><p>На Vercel приложение обычно работает от корня домена: base в Vite должен быть /. Значение /task-tracker/ для GitHub Pages нельзя без проверки переносить в эту сборку.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">Vercel · SPA</span> Занятие 03</div><h2>Маршруты и переменные окружения</h2><div class="code-frame"><pre class="code code--sm" data-language="json"><code>// vercel.json в корне проекта
+{
+  &quot;rewrites&quot;: [
+    { &quot;source&quot;: &quot;/(.*)&quot;, &quot;destination&quot;: &quot;/index.html&quot; }
+  ]
+}</code></pre></div><p class="explain">Для обычного SPA с BrowserRouter rewrite позволяет открыть /tasks/42 напрямую. Пример предназначен для приложения без собственных API-маршрутов на Vercel.</p><div class="fact"><div class="label">Важно</div><p>Production и Preview — окружения платформы. Обычная команда vite build в обоих случаях использует mode=production. Отдельный mode задаётся через --mode. После изменения переменных нужна новая публикация.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">Практика</span> Занятие 03</div><h2>Один проект, несколько способов публикации</h2><ul class="dots"><li>Создайте .env.example и .env.production с публичным адресом API.</li><li>Соберите dist и проверьте его через preview.</li><li>Запустите Compose без nginx для разработки, затем соберите вариант с nginx на localhost:8080.</li><li>Опубликуйте проект на GitHub Pages с подходящими base и HashRouter.</li><li>Настройте Vercel, проверьте переменные окружения и прямое открытие маршрута.</li></ul><div class="fact"><div class="label">Важно</div><p>Для каждого варианта проверяем главную страницу, ресурсы, внутренний маршрут и API. Изменённые VITE_* должны попасть в новую сборку.</p></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">Итоги</span> Занятие 03</div><h2>Роли инструментов</h2><div class="grid-2"><article class="card"><h3>.env и Vite</h3><p>Настройки выбираются для режима сборки. Публичные переменные VITE_* становятся частью клиентского приложения.</p></article><article class="card"><h3>Docker и nginx</h3><p>Docker упаковывает и запускает окружение. nginx принимает HTTP-запросы и отдаёт файлы сайта.</p></article></div><div class="grid-2"><article class="card"><h3>GitHub Pages</h3><p>Публикует готовую статику из репозитория. Для проекта учитываем путь репозитория и маршрутизацию.</p></article><article class="card"><h3>Vercel</h3><p>Собирает и публикует проект на платформе. Настройки окружения задаём перед сборкой.</p></article></div></div></section>
+<section class="slide slide--paper"><div class="inner inner--wide"><div class="kicker"><span class="pill">Материалы</span> Занятие 03</div><h2>Официальная документация</h2><ul class="dots"><li><a href="https://vite.dev/guide/env-and-mode" target="_blank" rel="noopener">Vite: переменные окружения и режимы</a></li><li><a href="https://docs.docker.com/get-started/" target="_blank" rel="noopener">Docker: образы, контейнеры и запуск</a></li><li><a href="https://nginx.org/en/docs/http/ngx_http_core_module.html#try_files" target="_blank" rel="noopener">nginx: директива try_files</a></li><li><a href="https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site" target="_blank" rel="noopener">GitHub Pages: источник публикации</a></li><li><a href="https://vercel.com/docs/frameworks/frontend/vite" target="_blank" rel="noopener">Vercel: размещение Vite</a></li></ul></div></section>
+  </main>
+  <script>
+    const slides = [...document.querySelectorAll(".slide")];
+    const bar = document.getElementById("bar");
+    const counter = document.getElementById("counter");
+    const total = slides.length;
+    let i = 0;
+
+    function pad(n) { return String(n).padStart(2, "0"); }
+
+    function go(n) {
+      i = Math.max(0, Math.min(total - 1, n));
+      slides.forEach((s, k) => (s.classList.toggle("is-on", k === i), s.setAttribute("aria-hidden", String(k !== i))));
+      bar.style.width = ((i + 1) / total * 100) + "%";
+      counter.textContent = pad(i + 1) + " / " + pad(total);
+      history.replaceState(null, "", "#" + (i + 1));
+    }
+
+    function fromHash() {
+      const n = parseInt(location.hash.replace("#", ""), 10);
+      if (Number.isFinite(n)) go(n - 1);
+      else go(0);
+    }
+
+    document.querySelector(".nav-hit--prev").addEventListener("click", () => go(i - 1));
+    document.querySelector(".nav-hit--next").addEventListener("click", () => go(i + 1));
+
+    document.addEventListener("keydown", (e) => {
+      if (e.target.closest("input, textarea, select, button, a, [contenteditable]")) return;
+      if (["ArrowRight", "ArrowDown", "PageDown", " ", "Enter"].includes(e.key)) {
+        e.preventDefault();
+        go(i + 1);
+      } else if (["ArrowLeft", "ArrowUp", "PageUp", "Backspace"].includes(e.key)) {
+        e.preventDefault();
+        go(i - 1);
+      } else if (e.key === "Home") {
+        e.preventDefault();
+        go(0);
+      } else if (e.key === "End") {
+        e.preventDefault();
+        go(total - 1);
+      } else if (e.key === "f" || e.key === "F") {
+        if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+        else document.exitFullscreen();
+      }
+    });
+
+    let touchX = null;
+    let touchY = null;
+    document.addEventListener("touchstart", (e) => { if (e.target.closest(".code-frame, a, button")) { touchX = null; return; } touchX = e.changedTouches[0].screenX; touchY = e.changedTouches[0].screenY; }, { passive: true });
+    document.addEventListener("touchend", (e) => {
+      if (touchX == null) return;
+      const dx = e.changedTouches[0].screenX - touchX;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(e.changedTouches[0].screenY - touchY)) go(dx < 0 ? i + 1 : i - 1);
+      touchX = null;
+    }, { passive: true });
+
+    window.addEventListener("hashchange", fromHash);
+    fromHash();
+  </script>
+
+<script id="code-tools">
+(() => {
+  const status = document.createElement('div');
+  status.className = 'copy-announcement';
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
+  document.body.append(status);
+  const icon = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" aria-hidden="true"><rect x="8" y="8" width="12" height="13" rx="2"/><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"/></svg>';
+  function fallback(text) {
+    const active = document.activeElement;
+    const field = document.createElement('textarea');
+    field.value = text;
+    field.setAttribute('aria-label', 'Код для копирования');
+    field.style.cssText = 'position:fixed;left:0;top:0;opacity:0;pointer-events:none';
+    document.body.append(field);
+    field.focus(); field.select();
+    let copied = false;
+    try { copied = document.execCommand('copy'); } catch {}
+    field.remove();
+    active?.focus({ preventScroll: true });
+    return copied;
+  }
+  document.querySelectorAll('.code-frame').forEach(frame => {
+    const code = frame.querySelector('pre.code code');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'code-copy';
+    button.title = 'Скопировать код';
+    button.setAttribute('aria-label', 'Скопировать код');
+    button.innerHTML = icon + '<span class="code-copy-label"></span>';
+    const label = button.querySelector('span');
+    let reset;
+    button.addEventListener('click', async event => {
+      event.stopPropagation();
+      clearTimeout(reset);
+      let copied = false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(code.textContent);
+          copied = true;
+        }
+      } catch {}
+      if (!copied) copied = fallback(code.textContent);
+      const message = copied ? 'Скопировано' : 'Выделено: Ctrl/Cmd+C';
+      if (!copied) {
+        const range = document.createRange();
+        range.selectNodeContents(code);
+        const selection = window.getSelection();
+        selection.removeAllRanges(); selection.addRange(range);
+      }
+      label.textContent = message;
+      button.dataset.state = copied ? 'success' : 'error';
+      button.setAttribute('aria-label', message);
+      status.textContent = '';
+      requestAnimationFrame(() => { status.textContent = message; });
+      reset = setTimeout(() => {
+        label.textContent = '';
+        delete button.dataset.state;
+        button.setAttribute('aria-label', 'Скопировать код');
+      }, 2400);
+    });
+    frame.append(button);
+  });
+})();
+</script>
+</body>
+</html>
